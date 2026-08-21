@@ -4,6 +4,7 @@
 import { ArrowDown, ArrowUpRight, CheckCircle2, Compass, FileText, MapPin, Sparkles, Target } from "lucide-react";
 import { Link } from "wouter";
 import { CourseCard, GuideCard, InstitutionCard, PathCard, ToolCard } from "@/components/ContentCards";
+import { Picture } from "@/components/Picture";
 import { PageShell, RouteLine, SectionHeading, organizationSchema } from "@/components/PortalLayout";
 import { courses, guides, institutions } from "@/data/portalData";
 import { useSeo } from "@/lib/seo";
@@ -32,7 +33,7 @@ export default function Home() {
   });
   return <PageShell>
     <section className="home-hero">
-      <img src={heroImage} alt="Estudantes universitários conversam com educadora comunitária durante planejamento de uma atividade" className="hero-image" fetchPriority="high" />
+      <Picture src={heroImage} alt="Estudantes universitários conversam com educadora comunitária durante planejamento de uma atividade" className="hero-image" eager />
       <div className="hero-overlay" />
       <div className="hero-content">
         <p className="eyebrow hero-eyebrow"><span /> Orientação que cabe na vida real</p>
@@ -52,7 +53,7 @@ export default function Home() {
     </section>
 
     <section className="tools-ribbon">
-      <div className="tools-ribbon-art"><img src={toolsImage} alt="Caderno de campo, mapa e materiais de planejamento sobre uma mesa" loading="lazy" /><div className="art-caption"><span>Ferramentas gratuitas</span><span>Feitas para planejar</span></div></div>
+      <div className="tools-ribbon-art"><Picture src={toolsImage} alt="Caderno de campo, mapa e materiais de planejamento sobre uma mesa" sizes="(min-width: 1024px) 50vw, 100vw" /><div className="art-caption"><span>Ferramentas gratuitas</span><span>Feitas para planejar</span></div></div>
       <div className="tools-ribbon-content"><p className="eyebrow">Planeje com mais clareza</p><h2>Ferramentas que transformam<br /><em>dúvida em próximo passo.</em></h2><p>Sem login, sem fórmulas mágicas e sem gerar trabalho pronto. Você encontra caminhos para decidir, organizar e registrar melhor.</p><div className="tools-stack"><ToolCard href="/ferramentas/gerador-de-ideias/" icon="ideas" title="Gerador de ideias" description="Sugestões de atividades para seu curso e contexto." /><ToolCard href="/ferramentas/seletor-de-ods/" icon="ods" title="Seletor de ODS" description="Descubra os objetivos mais coerentes para a ação." /><ToolCard href="/ferramentas/checklist-relatorio/" icon="check" title="Checklist do relatório" description="Acompanhe tudo que precisa estar pronto." /></div></div>
     </section>
 
@@ -61,7 +62,7 @@ export default function Home() {
     </section>
 
     <section className="impact-section">
-      <img src={odsImage} alt="Colagem em papel que representa educação, comunidade e um caminho de impacto" loading="lazy" className="impact-art" />
+      <Picture src={odsImage} alt="Colagem em papel que representa educação, comunidade e um caminho de impacto" className="impact-art" sizes="(min-width: 1024px) 50vw, 100vw" />
       <div className="impact-copy"><p className="eyebrow">Ação com sentido</p><h2>Escolher o ODS é explicar<br />o <em>porquê</em> da sua ação.</h2><p>O ODS não precisa ser uma sigla solta no relatório. Ele conecta um problema real, o público que participa e o efeito que você quer apoiar.</p><Link href="/ods/" className="button button-dark"><Target size={18} /> Entender os ODS</Link></div>
       <div className="impact-note"><CheckCircle2 size={21} /><p><strong>Comece pelo problema.</strong><br />O objetivo aparece com mais clareza depois.</p></div>
     </section>
@@ -71,7 +72,7 @@ export default function Home() {
     </section>
 
     <section className="community-section">
-      <div className="community-image-wrap"><img src={communityImage} alt="Estudante conduz atividade de aprendizagem com participantes em um centro comunitário" loading="lazy" /><span className="photo-label">Extensão acontece com pessoas, não em um formulário.</span></div>
+      <div className="community-image-wrap"><Picture src={communityImage} alt="Estudante conduz atividade de aprendizagem com participantes em um centro comunitário" sizes="(min-width: 1024px) 50vw, 100vw" /><span className="photo-label">Extensão acontece com pessoas, não em um formulário.</span></div>
       <div className="community-copy"><p className="eyebrow">Antes, durante e depois</p><h2>Uma boa atividade deixa <em>rastros de aprendizagem.</em></h2><p>Planejar também é pensar no registro: o que você vai observar, como vai documentar e quais cuidados deve ter ao trabalhar com pessoas e instituições.</p><div className="three-notes"><div><span>01</span><h3>Planeje</h3><p>Objetivo, público, local e materiais.</p></div><div><span>02</span><h3>Realize</h3><p>Atividade possível e conversa respeitosa.</p></div><div><span>03</span><h3>Registre</h3><p>Evidências coerentes e autorizadas.</p></div></div><Link href="/evidencias/" className="text-link">Como organizar evidências <ArrowUpRight size={17} /></Link></div>
     </section>
 
