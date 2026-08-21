@@ -6,3 +6,10 @@
 - [x] Configurar testes E2E com Playwright para gerador de ideias, seletor de ODS e checklist.
 - [x] Executar testes, typecheck e build de produção.
 - [x] Verificar o conteúdo copiado na pasta local e salvar o checkpoint final.
+
+## Publicação no GitHub
+
+- [x] Verificar a referência remota do repositório selecionado.
+- [x] Criar um commit de publicação com a versão final validada.
+- [ ] Enviar a branch principal ao repositório `bugzoidTM/extensaofacil`.
+- [ ] Confirmar o commit remoto publicado.
