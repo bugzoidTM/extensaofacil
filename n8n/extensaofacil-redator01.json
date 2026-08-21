@@ -1,0 +1,472 @@
+{
+  "name": "extensaofacil-redator01",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "5e188326-450e-4411-9113-6f3f12833ba0",
+      "name": "Executar à mão",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "89032bfd-38fb-4282-aad3-e6940236b9cd",
+      "name": "A cada 6 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        180
+      ],
+      "disabled": true,
+      "notes": "Ligue quando confiar no fluxo. Cada disparo escreve UMA página da fila.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1635d04-99c6-41bb-ab43-26555774a45f",
+              "name": "alvo",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "fecfe08f-9175-4bf7-9107-2c3975fe1b54",
+              "name": "modelo",
+              "value": "qwen3.8-max",
+              "type": "string"
+            },
+            {
+              "id": "ec001e15-38a9-41d8-ab1f-dbf4b1c2ee26",
+              "name": "minPalavras",
+              "value": 1200,
+              "type": "number"
+            },
+            {
+              "id": "fe2520f7-14c5-4656-bc26-b98c18d46c2c",
+              "name": "minSecoes",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "21524c6a-9a59-4254-a9b8-4795d1e4c4dc",
+              "name": "publicarAutomaticamente",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "4924d50d-616d-4e38-8cc9-97b158d2e64a",
+              "name": "cmsToken",
+              "value": "COLE_AQUI_O_ADMIN_API_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "8bd07a15-bff0-4384-afaa-c72f3609abda",
+              "name": "redatorToken",
+              "value": "COLE_AQUI_A_CHAVE_DO_QWENPROXY",
+              "type": "string"
+            },
+            {
+              "id": "5c6de052-03db-42ae-84c4-7514c0ade596",
+              "name": "telegramToken",
+              "value": "COLE_AQUI_O_TOKEN_DO_NUTEF_BOT",
+              "type": "string"
+            },
+            {
+              "id": "c80d7229-b57e-4175-a264-1a704a3e8a18",
+              "name": "telegramChatId",
+              "value": "1610680538",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d7aeade7-df1d-46fd-a96b-f52cd4f05cb9",
+      "name": "Configuração",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -240,
+        80
+      ],
+      "notes": "alvo vazio = pega a próxima da fila de prioridade. Preencha com um slug para forçar uma página.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://extensaofacil.com.br/admin/api/pages",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Configuração').first().json.cmsToken }}"
+            }
+          ]
+        }
+      },
+      "id": "764658d6-6e5a-48e5-a3bc-f48c0b7f5706",
+      "name": "Listar páginas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -20,
+        80
+      ],
+      "notes": "Estado atual do CMS: o que existe e quantas palavras tem.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://extensaofacil.com.br/content/portal-data.json",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "3ca780d7-e2d3-4c92-85ed-81463d501ead",
+      "name": "Conteúdo publicado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        80
+      ],
+      "notes": "Texto já publicado, usado para não repetir parágrafo.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Escolhe a próxima página a escrever e monta o prompt.\n// Ordem de prioridade: o PRD manda terminar as páginas-pilar antes de produzir em massa\n// (§90), então respeitamos essa fila em vez de varrer o site inteiro.\n\nconst cfg = $('Configuração').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\nconst publicado = $('Conteúdo publicado').first().json;\n\nconst PRIORIDADE = [\n  'projeto-de-extensao', 'relatorio-final', 'anhanguera', 'unopar',\n  'relatorio-final/como-preencher', 'relatorio-final/durante-a-acao',\n  'relatorio-final/resultado-da-acao', 'relatorio-final/conclusao',\n  'relatorio-final/percepcao', 'relatorio-final/depoimento-instituicao',\n  'relatorio-final/evidencias',\n  'como-fazer-projeto-de-extensao', 'ideias-projeto-de-extensao',\n  'ods', 'onde-realizar', 'evidencias',\n  'pedagogia', 'enfermagem', 'administracao', 'analise-e-desenvolvimento-de-sistemas', 'direito',\n];\n\nconst porSlug = Object.fromEntries(paginas.map(p => [p.slug, p]));\nlet alvo = null;\n\nif (cfg.alvo) {\n  alvo = porSlug[cfg.alvo];\n  if (!alvo) throw new Error(`A página \"${cfg.alvo}\" não existe no CMS. Crie-a primeiro no painel.`);\n} else {\n  for (const slug of PRIORIDADE) {\n    const p = porSlug[slug];\n    if (p && p.words < cfg.minPalavras) { alvo = p; break; }\n  }\n}\nif (!alvo) return [{ json: { nada: true, motivo: 'Todas as páginas da fila já passaram do mínimo de palavras.' } }];\n\n// Estrutura pedida pelo PRD, por tipo de página.\nconst ROTEIRO = {\n  guide: ['O que é / resposta direta', 'Para que serve', 'Como funciona na prática',\n          'Como escolher (problema, público, local)', 'Passo a passo', 'Exemplo completo identificado como exemplo',\n          'Erros comuns', 'Como isso aparece no relatório final', 'Próximos passos'],\n  course: ['Como funciona um projeto de extensão neste curso', 'Competências do curso que podem ser aplicadas',\n           'Problemas que o curso consegue enfrentar', 'Locais adequados', 'Públicos possíveis',\n           'ODS relacionados e por quê', 'Exemplos de atividades', 'Materiais necessários',\n           'Evidências que fazem sentido', 'O que muda no relatório final', 'Erros comuns'],\n  institution: ['Como funcionam as atividades extensionistas nesta instituição',\n                'Como interpretar o roteiro da disciplina', 'Estrutura normalmente solicitada',\n                'ODS', 'Comunidade externa e local da atividade', 'Execução',\n                'Relatório final', 'Evidências', 'Principais dúvidas', 'Erros recorrentes'],\n};\n\n// Para as páginas de faculdade, mandamos o texto da OUTRA faculdade junto com a ordem\n// explícita de não repetir — é o problema nomeado no §22 do PRD.\nlet contraste = '';\nif (alvo.kind === 'institution') {\n  const outras = (publicado.guides || []).length ? [] : [];\n  const irmas = paginas.filter(p => p.kind === 'institution' && p.slug !== alvo.slug).map(p => p.slug);\n  contraste = `\\nEstas outras páginas de faculdade já existem: ${irmas.join(', ')}. `\n    + `NÃO reaproveite parágrafos, exemplos ou justificativas delas. O conteúdo textual precisa ser próprio desta instituição.`;\n}\n\nconst guiaAtual = (publicado.guides || []).find(g => g.slug === alvo.slug);\nconst conteudoAtual = guiaAtual\n  ? `\\n\\nCONTEÚDO ATUAL DESTA PÁGINA (amplie e aprofunde, não jogue fora o que está bom):\\n`\n    + `Resposta rápida: ${guiaAtual.quickAnswer}\\n`\n    + (guiaAtual.sections || []).map(s => `## ${s.title}\\n${(s.paragraphs || []).join('\\n')}`).join('\\n')\n  : '';\n\nconst slugsDisponiveis = paginas.map(p => `${p.slug} (${p.title})`).join('\\n');\n\nconst system = [\n  'Você é redator do Extensão Fácil, um portal brasileiro que orienta estudantes de graduação a planejar,',\n  'executar e documentar atividades de extensão universitária.',\n  '',\n  'REGRAS EDITORIAIS OBRIGATÓRIAS:',\n  '1. Português do Brasil, tom editorial e direto. Nada de linguagem publicitária ou promessa de resultado fácil.',\n  '2. NUNCA afirme regra institucional específica (prazo, quantidade de horas, campo obrigatório, nota) como se fosse',\n  '   fato verificado. Quando o assunto for exigência de faculdade, diga que varia por curso, matriz e período letivo,',\n  '   e oriente a consultar o roteiro oficial no ambiente acadêmico do aluno.',\n  '3. Exemplos são bem-vindos, mas todo exemplo deve estar explicitamente identificado como exemplo fictício.',\n  '   Jamais apresente um exemplo como atividade real já realizada.',\n  '4. Não invente estatística, pesquisa, número ou citação. Se não tem fonte, não afirme.',\n  '5. Não escreva texto genérico que serviria para qualquer página. Cada seção precisa ser específica ao tema.',\n  '6. Não copie estrutura de frase nem parágrafos de outras páginas do portal.',\n  '7. Nada de CTA comercial no meio do conteúdo.',\n  '',\n  'FORMATO DA RESPOSTA: apenas um objeto JSON válido, sem markdown, sem crase, sem comentário antes ou depois.',\n].join('\\n');\n\nconst user = [\n  `Escreva o conteúdo completo da página \"${alvo.title || alvo.slug}\" (${alvo.route}).`,\n  `Tipo: ${alvo.kind}. Intenção de busca: ${alvo.intent}.`,\n  '',\n  `Mínimo de ${cfg.minPalavras} palavras no total, distribuídas nas seções.`,\n  `Escreva pelo menos ${cfg.minSecoes} seções, seguindo este roteiro (adapte os títulos, não copie literalmente):`,\n  (ROTEIRO[alvo.kind] || ROTEIRO.guide).map((s, i) => `  ${i + 1}. ${s}`).join('\\n'),\n  contraste,\n  '',\n  'Escolha de 3 a 4 slugs desta lista para o campo \"related\" (só slugs que existem aqui):',\n  slugsDisponiveis,\n  conteudoAtual,\n  '',\n  'Responda com este JSON:',\n  JSON.stringify({\n    title: 'título da página, até 65 caracteres, com a palavra-chave principal',\n    description: 'meta description entre 120 e 160 caracteres',\n    eyebrow: 'chapéu curto, 1 a 3 palavras',\n    quickAnswer: 'parágrafo único de 250 a 500 caracteres respondendo a dúvida de forma direta',\n    tags: ['3 a 6 tags'],\n    related: ['slug1', 'slug2', 'slug3'],\n    sections: [{ title: 'título da seção', paragraphs: ['parágrafo'], bullets: ['item opcional'] }],\n    sources: [{ institution: 'órgão ou instituição', title: 'nome do documento', url: 'https://', accessedAt: '2026-08-21' }],\n  }, null, 2),\n  '',\n  'O campo \"sources\" só deve conter fontes que você tem certeza que existem. Se não tiver, devolva lista vazia.',\n].join('\\n');\n\nreturn [{ json: { alvo, system, user, cfg } }];\n"
+      },
+      "id": "7d5b95c1-04b6-42c1-9c1c-de687f185ca9",
+      "name": "Escolher alvo e montar prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        80
+      ],
+      "notes": "Fila do §90 do PRD e as regras editoriais que vão no prompt.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://closeai.nutef.com/v1/chat/completions",
+        "options": {
+          "timeout": 600000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Configuração').first().json.redatorToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Configuração').first().json.modelo, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}"
+      },
+      "id": "afde203f-465b-4a9b-8705-21bf306700b0",
+      "name": "Redator (qwenproxy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        80
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 60000,
+      "notes": "closeai.nutef.com (qwenproxy). ~100s por artigo. Para voltar ao chatgptproxy: troque a URL para https://gptproxy.nutef.com/v1/chat/completions, o modelo para gpt-5 e o gptToken pela chave daquele serviço.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Portão de qualidade. O PRD (§64) exige revisão antes de publicar; aqui rejeitamos\n// o que claramente não passa, para não gravar lixo no banco.\n\nconst resposta = $json.choices?.[0]?.message?.content;\nif (!resposta) throw new Error('O chatgptproxy não devolveu conteúdo: ' + JSON.stringify($json).slice(0, 500));\n\nconst alvo = $('Escolher alvo e montar prompt').first().json.alvo;\nconst cfg = $('Configuração').first().json;\nconst publicado = $('Conteúdo publicado').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\n\n// O modelo às vezes embrulha o JSON em bloco de código, mesmo proibido no prompt.\nlet bruto = resposta.trim();\nconst cerca = bruto.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (cerca) bruto = cerca[1].trim();\nconst inicio = bruto.indexOf('{');\nconst fim = bruto.lastIndexOf('}');\nif (inicio < 0 || fim < 0) throw new Error('Resposta sem JSON reconhecível: ' + bruto.slice(0, 300));\n\nlet art;\ntry { art = JSON.parse(bruto.slice(inicio, fim + 1)); }\ncatch (e) { throw new Error('JSON inválido do modelo: ' + e.message + ' | trecho: ' + bruto.slice(0, 300)); }\n\nconst problemas = [];\nconst secoes = Array.isArray(art.sections) ? art.sections : [];\nconst textos = secoes.flatMap(s => [...(s.paragraphs || []), ...(s.bullets || [])]);\nconst palavras = [art.quickAnswer, ...secoes.map(s => s.title), ...textos].join(' ').trim().split(/\\s+/).filter(Boolean).length;\n\nif (!art.title) problemas.push('sem título');\nif (!art.description || art.description.length < 80) problemas.push('description curta demais');\nif (art.description && art.description.length > 200) problemas.push('description longa demais');\nif (!art.quickAnswer || art.quickAnswer.length < 180) problemas.push('resposta rápida curta demais');\nif (secoes.length < cfg.minSecoes) problemas.push(`só ${secoes.length} seções (mínimo ${cfg.minSecoes})`);\nif (palavras < cfg.minPalavras) problemas.push(`só ${palavras} palavras (mínimo ${cfg.minPalavras})`);\nif (secoes.some(s => !s.title || !(s.paragraphs || []).length)) problemas.push('seção sem título ou sem parágrafo');\n\n// Marcas de rascunho que o modelo às vezes deixa\nconst suspeito = /lorem ipsum|\\[inserir|\\bXXX\\b|preencher aqui|TODO:/i;\nif (suspeito.test(JSON.stringify(art))) problemas.push('sobrou texto de preenchimento');\n\n// §25/§22: nenhum parágrafo longo pode ser idêntico ao de outra página já publicada\nconst corpus = [];\nfor (const g of publicado.guides || []) {\n  if (g.slug === alvo.slug) continue;\n  for (const s of g.sections || []) for (const p of s.paragraphs || []) corpus.push({ slug: g.slug, p });\n}\nfor (const p of textos) {\n  if (p.length < 120) continue;\n  const igual = corpus.find(c => c.p.trim() === p.trim());\n  if (igual) { problemas.push(`parágrafo idêntico ao de /${igual.slug}/`); break; }\n}\n\n// related só pode apontar para slug que existe\nconst existentes = new Set(paginas.map(p => p.slug));\nconst related = (art.related || []).filter(s => existentes.has(s) && s !== alvo.slug).slice(0, 4);\nif (!related.length) problemas.push('nenhum link interno válido');\n\nif (problemas.length) {\n  throw new Error(`Conteúdo reprovado para ${alvo.route}: ${problemas.join('; ')}`);\n}\n\nreturn [{\n  json: {\n    slug: alvo.slug,\n    kind: alvo.kind,\n    title: art.title,\n    description: art.description,\n    eyebrow: art.eyebrow || alvo.eyebrow || '',\n    quickAnswer: art.quickAnswer,\n    intent: alvo.intent,\n    tags: (art.tags || []).slice(0, 6),\n    related,\n    extra: alvo.extra || {},\n    author: 'equipe-extensao-facil',\n    reviewedAt: new Date().toISOString().slice(0, 10),\n    published: true,\n    sections: secoes.map(s => ({ title: s.title, paragraphs: s.paragraphs || [], bullets: s.bullets || [] })),\n    sources: Array.isArray(art.sources) ? art.sources : [],\n    _resumo: { rota: alvo.route, palavras, secoes: secoes.length, fontes: (art.sources || []).length },\n  },\n}];\n"
+      },
+      "id": "951e189d-9a17-485d-a096-949f86ffe6eb",
+      "name": "Validar conteúdo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        80
+      ],
+      "notes": "Reprova texto raso, parágrafo repetido, link interno inválido e marca de rascunho.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://extensaofacil.com.br/admin/api/pages/detail",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Configuração').first().json.cmsToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "753247e8-1d7e-4bd3-b268-ca283a788d52",
+      "name": "Gravar no CMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        80
+      ],
+      "notes": "Só grava no banco. O site NÃO muda até alguém publicar.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "db299a1f-9cfc-4af3-b7be-405f38fc9ca0",
+              "leftValue": "={{ $('Configuração').first().json.publicarAutomaticamente }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a49daf72-0036-4ffb-98bc-7659dbdb93ff",
+      "name": "Publicar automaticamente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://extensaofacil.com.br/admin/api/publish",
+        "options": {
+          "timeout": 180000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Configuração').first().json.cmsToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ slugs: [ $('Validar conteúdo').first().json.slug ] }) }}"
+      },
+      "id": "bb0a7ff3-f8f0-40a0-945e-ea08be14fd56",
+      "name": "Publicar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('Configuração').first().json.telegramToken }}/sendMessage",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Configuração').first().json.telegramChatId, parse_mode: 'HTML', disable_web_page_preview: true, text: '<b>Extensão Fácil — texto novo</b>\\n' + $('Validar conteúdo').first().json.title + '\\n' + $('Validar conteúdo').first().json._resumo.rota + ' · ' + $('Validar conteúdo').first().json._resumo.palavras + ' palavras · ' + $('Validar conteúdo').first().json._resumo.secoes + ' seções · ' + $('Validar conteúdo').first().json._resumo.fontes + ' fontes A CONFERIR\\n\\n' + ($('Configuração').first().json.publicarAutomaticamente ? 'Publicado.' : 'Salvo como rascunho. Revise e publique em https://extensaofacil.com.br/admin/') }) }}"
+      },
+      "id": "4bc1e847-46b1-4d57-86e5-3cab6ad665ac",
+      "name": "Avisar no Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        80
+      ],
+      "notes": "As fontes citadas NÃO são verificadas automaticamente: gov.br e sites de universidade devolvem 403 para o IP da VPS, então a checagem daria falso negativo. Confira os links na revisão, antes de publicar.",
+      "notesInFlow": true
+    }
+  ],
+  "connections": {
+    "Executar à mão": {
+      "main": [
+        [
+          {
+            "node": "Configuração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "A cada 6 horas": {
+      "main": [
+        [
+          {
+            "node": "Configuração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuração": {
+      "main": [
+        [
+          {
+            "node": "Listar páginas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar páginas": {
+      "main": [
+        [
+          {
+            "node": "Conteúdo publicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conteúdo publicado": {
+      "main": [
+        [
+          {
+            "node": "Escolher alvo e montar prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escolher alvo e montar prompt": {
+      "main": [
+        [
+          {
+            "node": "Redator (qwenproxy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar conteúdo": {
+      "main": [
+        [
+          {
+            "node": "Gravar no CMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gravar no CMS": {
+      "main": [
+        [
+          {
+            "node": "Publicar automaticamente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar automaticamente?": {
+      "main": [
+        [
+          {
+            "node": "Publicar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisar no Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar": {
+      "main": [
+        [
+          {
+            "node": "Avisar no Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redator (qwenproxy)": {
+      "main": [
+        [
+          {
+            "node": "Validar conteúdo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "2EqBWDR9cJXUovah"
+  },
+  "pinData": {}
+}
