@@ -29,7 +29,9 @@ function Router() {
     <Route path="/ferramentas/gerador-de-ideias/" component={IdeasToolPage} />
     <Route path="/ferramentas/seletor-de-ods/" component={OdsToolPage} />
     <Route path="/ferramentas/checklist-relatorio/" component={ChecklistToolPage} />
+    <Route path="/relatorio-final/:section/">{(params) => <ArticlePage slug={`relatorio-final/${params.section}`} />}</Route>
     <Route path="/cursos/" component={() => <CollectionPage type="cursos" />} />
+    <Route path="/cursos/:course/ideias/">{(params) => <ArticlePage slug={`cursos/${params.course}/ideias`} />}</Route>
     <Route path="/cursos/:slug/">{(params) => <CoursePage slug={params.slug} />}</Route>
     <Route path="/faculdades/" component={() => <CollectionPage type="faculdades" />} />
     <Route path="/faculdades/:slug/">{(params) => <InstitutionPage slug={params.slug} />}</Route>

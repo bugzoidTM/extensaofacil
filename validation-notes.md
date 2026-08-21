@@ -43,3 +43,9 @@ A inspeção do documento da página pilar confirmou título exclusivo, descript
 A homepage também foi inspecionada e apresentou canonical absoluto para a raiz, diretiva indexável e Organization Schema com nome, URL e logo da marca.
 
 O título da homepage foi ajustado e confirmado como `Extensão Fácil | Projeto de Extensão sem complicação`, conforme o padrão previsto no PRD.
+
+## Conteúdo P1 e testes E2E
+
+Foram publicados dez guias P1 adicionais, incluindo resultados, percepção, depoimento, conclusão, evidências fotográficas, ideias por curso e escolha de local. A rota aninhada de relatório final foi verificada diretamente em `/relatorio-final/resultado-da-acao/` e apresenta conteúdo, metadados e recomendações internas corretas. A suíte Playwright cobre geração de cinco ideias, classificação de ODS e persistência do checklist; os três cenários concluíram com sucesso.
+
+A rota P1 `/cursos/pedagogia/ideias/` também foi aberta diretamente e confirmou conteúdo específico de Pedagogia, navegação editorial, canonical absoluto, título exclusivo e diretiva de indexação correta.
