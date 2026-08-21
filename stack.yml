@@ -41,12 +41,29 @@ services:
       - /root/extensaofacil:/app
     environment:
       - PORT=8095
-      - ADMIN_PASSWORD_FILE=/run/secrets/ef_admin_password
-      - ADMIN_SECRET_FILE=/run/secrets/ef_admin_secret
       - CONTENT_DB=/app/cms/content.db
-    secrets:
-      - ef_admin_password
-      - ef_admin_secret
+
+      # ================= ACESSO AO PAINEL =================
+      # https://extensaofacil.com.br/admin/
+      #
+      # ESQUECEU A SENHA? Dois caminhos, os dois valem na hora:
+      #
+      #   1) Portainer > Services > extensaofacil_cms > Environment variables:
+      #      edite ADMIN_PASSWORD e clique em "Update the service".
+      #
+      #   2) Na VPS: edite /root/.extensaofacil.env e rode
+      #      `docker stack deploy -c /root/extensaofacil/stack.yml extensaofacil`
+      #
+      # Os valores ficam em /root/.extensaofacil.env, FORA do repositório —
+      # este arquivo é público no GitHub e não pode carregar credencial.
+      - ADMIN_PASSWORD=${EF_ADMIN_PASSWORD}
+
+      # Token da API, usado pelo n8n para escrever e publicar sem sessão.
+      - ADMIN_API_TOKEN=${EF_ADMIN_API_TOKEN}
+
+      # Assina o cookie de sessão. Trocar este valor desloga todo mundo.
+      - ADMIN_SECRET=${EF_ADMIN_SECRET}
+      # ====================================================
     networks:
       - Nutef
     deploy:
@@ -73,12 +90,6 @@ services:
         - traefik.http.routers.extensaofacil-admin.middlewares=extensaofacil-admin-slash,extensaofacil-admin-strip
         - traefik.http.routers.extensaofacil-admin.service=extensaofacil-admin
         - traefik.http.services.extensaofacil-admin.loadbalancer.server.port=8095
-
-secrets:
-  ef_admin_password:
-    external: true
-  ef_admin_secret:
-    external: true
 
 networks:
   Nutef:

@@ -5,6 +5,9 @@
 set -euo pipefail
 cd /root/extensaofacil
 
+# credenciais do painel ficam fora do repo (público); o stack.yml só referencia
+if [ -f /root/.extensaofacil.env ]; then set -a; . /root/.extensaofacil.env; set +a; fi
+
 export PNPM_HOME=/root/.local/share/pnpm
 export PATH="$PNPM_HOME:$PATH"
 corepack enable >/dev/null 2>&1 || true
