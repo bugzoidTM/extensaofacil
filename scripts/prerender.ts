@@ -111,9 +111,18 @@ const readState = (): State => {
 };
 const writeState = (s: State) => fs.writeFileSync(STATE_FILE, JSON.stringify(s, null, 2));
 
+const routeToFile = (route: string) =>
+  route === "/" ? path.join(DIST, "index.html") : path.join(DIST, route, "index.html");
+
 export function writeSitemap(routes: string[], missing: string[]) {
   const today = new Date().toISOString().slice(0, 10);
-  const list = routes.filter((r) => !NOINDEX.has(r) && !missing.includes(r)).sort((a, b) => a.localeCompare(b));
+  // Só entra no sitemap a rota que tem HTML gravado. Uma publicação parcial pode
+  // trazer conteúdo novo para o JSON sem ainda ter renderizado aquelas rotas — sem
+  // esta checagem o sitemap anuncia URLs que respondem 404.
+  const list = routes
+    .filter((r) => !NOINDEX.has(r) && !missing.includes(r))
+    .filter((r) => fs.existsSync(routeToFile(r)))
+    .sort((a, b) => a.localeCompare(b));
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     list.map((r) => `  <url><loc>${SITE_URL}${r}</loc><lastmod>${today}</lastmod></url>`).join("\n") +
     `\n</urlset>\n`;
@@ -121,9 +130,6 @@ export function writeSitemap(routes: string[], missing: string[]) {
   fs.writeFileSync(path.join(REPO, "client", "public", "sitemap.xml"), xml);
   return list.length;
 }
-
-const routeToFile = (route: string) =>
-  route === "/" ? path.join(DIST, "index.html") : path.join(DIST, route, "index.html");
 
 /**
  * Renderiza as rotas pedidas. Devolve as que caíram na MissingPage — o App tem rota
