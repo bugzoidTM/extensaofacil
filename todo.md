@@ -13,3 +13,10 @@
 - [x] Criar um commit de publicação com a versão final validada.
 - [x] Enviar a branch principal ao repositório `bugzoidTM/extensaofacil`.
 - [x] Confirmar o commit remoto publicado.
+
+## Correção de imagens de produção
+
+- [x] Conferir as referências de imagem e os arquivos disponíveis no repositório atual.
+- [x] Integrar cinco imagens de produção compatíveis com o design editorial do portal.
+- [x] Validar o build e a exibição das imagens fora do ambiente de desenvolvimento.
+- [ ] Publicar a correção de imagens no GitHub.
