@@ -21,7 +21,7 @@ const api = async (url, opts = {}) => {
 
 const state = {
   authed: false, pages: [], authors: [], current: null, dirty: false,
-  filter: "", kind: "", msg: null, status: null, busy: false,
+  filter: "", kind: "", soRascunhos: false, msg: null, status: null, busy: false,
 };
 
 const KINDS = { guide: "Guia", course: "Curso", institution: "Faculdade" };
@@ -67,9 +67,16 @@ function listView() {
     ...Object.entries(KINDS).map(([v, l]) => el("option", { value: v, selected: state.kind === v }, l)));
   kind.onchange = () => { state.kind = kind.value; renderList(); };
 
+  const rascunhos = state.pages.filter((p) => !p.published).length;
+  const filtroRascunho = el("button", {
+    className: state.soRascunhos ? "primary" : "",
+    onclick: () => { state.soRascunhos = !state.soRascunhos; render(); },
+  }, state.soRascunhos ? `mostrando só rascunhos (${rascunhos})` : `ver só rascunhos (${rascunhos})`);
+
   const items = el("div", { id: "items" });
   const box = el("div", { className: "panel list" },
     el("header", {}, search, kind,
+      rascunhos ? filtroRascunho : "",
       el("button", { onclick: newPage }, "+ Nova página")), items);
   renderList(items);
   return box;
@@ -80,6 +87,7 @@ function renderList(container = $("#items")) {
   const q = state.filter.toLowerCase();
   const rows = state.pages.filter((p) =>
     (!state.kind || p.kind === state.kind) &&
+    (!state.soRascunhos || !p.published) &&
     (!q || p.title.toLowerCase().includes(q) || p.slug.includes(q)));
   container.replaceChildren(...rows.map((p) => {
     const btn = el("button", {
@@ -201,6 +209,11 @@ function editorView() {
   const body = el("div", { className: "editor" },
     el("h2", {}, page.title || page.slug),
     el("div", { className: "route" }, page.route, " · ", KINDS[page.kind] || page.kind, " · ", `${page.words} palavras`),
+    el("label", { className: "publish-toggle" + (page.published ? "" : " off") },
+      published,
+      el("span", {}, page.published
+        ? "Publicada — sai no site na próxima publicação."
+        : "RASCUNHO — não vai ao ar nem no \"Publicar tudo\". Marque aqui para aprovar.")),
 
     field("Título", bind(page, "title", el("input", { value: page.title }))),
     field("Descrição (meta description)", bind(page, "description", el("textarea", { value: page.description, style: "min-height:60px" })),
@@ -221,8 +234,7 @@ function editorView() {
     sectionEditor(page),
     el("label", { style: "margin-top:22px" }, "Fontes consultadas"),
     sourceEditor(page),
-    el("div", { className: "field", style: "margin-top:18px" },
-      el("label", {}, "Publicada"), published));
+    );
 
   const bar = el("div", { className: "bar" },
     el("button", { id: "save", className: "primary", disabled: !state.dirty, onclick: save }, state.dirty ? "Salvar alterações" : "Salvo"),
@@ -305,6 +317,12 @@ function render() {
     el("strong", {}, "Extensão Fácil"),
     el("span", { className: "status" },
       st.pending ? `${st.pending} página(s) com alteração não publicada` : "tudo publicado",
+      (() => {
+        const r = state.pages.filter((p) => !p.published).length;
+        // "Publicar tudo" NÃO leva rascunho ao ar: published=false tira a página do
+        // payload inteiro. Sem dizer isso aqui, some do radar.
+        return r ? ` · ${r} rascunho(s) fora do ar — "Publicar tudo" não os inclui` : "";
+      })(),
       st.lastPublish ? ` · última publicação ${st.lastPublish.at} UTC` : ""),
     el("div", { className: "grow" }),
     state.msg ? el("span", { className: "msg " + state.msg.kind, style: "color:#fff" }, state.msg.text) : "",
