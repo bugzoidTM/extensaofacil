@@ -8,10 +8,10 @@ import { PageShell, RouteLine, SectionHeading, organizationSchema } from "@/comp
 import { courses, guides, institutions } from "@/data/portalData";
 import { useSeo } from "@/lib/seo";
 
-const heroImage = "/manus-storage/extensao-facil-hero_ba2e9b46.jpg";
-const toolsImage = "/manus-storage/extensao-facil-tools_ce99dfac.jpg";
-const communityImage = "/manus-storage/extensao-facil-community_9150e010.jpg";
-const odsImage = "/manus-storage/extensao-facil-ods_b4aabb26.jpg";
+const heroImage = "/img/extensao-facil-hero_ba2e9b46.jpg";
+const toolsImage = "/img/extensao-facil-tools_ce99dfac.jpg";
+const communityImage = "/img/extensao-facil-community_9150e010.jpg";
+const odsImage = "/img/extensao-facil-ods_b4aabb26.jpg";
 
 const startPaths = [
   { href: "/projeto-de-extensao/", icon: "book" as const, title: "Entender o projeto", description: "Comece pelo que a extensão pede e por que ela importa." },

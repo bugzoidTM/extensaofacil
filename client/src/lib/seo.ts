@@ -12,7 +12,7 @@ type SeoOptions = {
   schema?: Record<string, unknown>;
 };
 
-const heroImage = `${SITE_URL}/manus-storage/extensao-facil-hero_ba2e9b46.jpg`;
+const heroImage = `${SITE_URL}/img/extensao-facil-hero_ba2e9b46.jpg`;
 
 function setMeta(name: string, content: string, property = false) {
   const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;

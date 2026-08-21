@@ -6,7 +6,7 @@ import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { SITE_NAME, SITE_URL } from "@/data/portalData";
 
-const markUrl = "/manus-storage/extensao-facil-mark_d761bcd0.png";
+const markUrl = "/img/extensao-facil-mark_d761bcd0.png";
 
 const navItems = [
   { label: "Projeto de extensão", href: "/projeto-de-extensao/" },

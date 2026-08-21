@@ -14,7 +14,7 @@ function breadcrumbSchema(items: { name: string; path: string }[]) {
 }
 
 function articleSchema(title: string, description: string, path: string, updated: string) {
-  return { "@context": "https://schema.org", "@type": "Article", headline: title, description, mainEntityOfPage: `${SITE_URL}${path}`, datePublished: "2026-08-21", dateModified: "2026-08-21", author: { "@type": "Organization", name: "Equipe Extensão Fácil" }, publisher: { "@type": "Organization", name: SITE_NAME, logo: { "@type": "ImageObject", url: `${SITE_URL}/manus-storage/extensao-facil-mark_d761bcd0.png` } }, image: `${SITE_URL}/manus-storage/extensao-facil-hero_ba2e9b46.jpg`, about: updated };
+  return { "@context": "https://schema.org", "@type": "Article", headline: title, description, mainEntityOfPage: `${SITE_URL}${path}`, datePublished: "2026-08-21", dateModified: "2026-08-21", author: { "@type": "Organization", name: "Equipe Extensão Fácil" }, publisher: { "@type": "Organization", name: SITE_NAME, logo: { "@type": "ImageObject", url: `${SITE_URL}/img/extensao-facil-mark_d761bcd0.png` } }, image: `${SITE_URL}/img/extensao-facil-hero_ba2e9b46.jpg`, about: updated };
 }
 
 export function ArticlePage({ slug }: { slug: string }) {

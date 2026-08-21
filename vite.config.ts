@@ -203,10 +203,13 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
+// Os plugins do Manus (overlay de edição, coletor de logs, proxy de storage) só fazem
+// sentido no dev dentro do Manus. Em produção eles iam junto no bundle e inchavam o
+// index.html em ~100 kB gzip, então ficam fora do build.
+const manusDevPlugins = [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
 
-export default defineConfig({
-  plugins,
+export default defineConfig(({ command }) => ({
+  plugins: [react(), tailwindcss(), ...(command === "serve" ? manusDevPlugins : [])],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -238,4 +241,4 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
-});
+}));
