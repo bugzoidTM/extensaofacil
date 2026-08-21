@@ -1,42 +1,47 @@
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
+/**
+ * Direção visual: Caderno de Campo Contemporâneo — arquitetura aberta, navegação contextual e carregamento leve por percurso.
+ */
+import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
 
+const Home = lazy(() => import("./pages/Home"));
+const SearchPage = lazy(() => import("./pages/SearchPage"));
+const ArticlePage = lazy(async () => ({ default: (await import("./pages/ContentPages")).ArticlePage }));
+const CollectionPage = lazy(async () => ({ default: (await import("./pages/ContentPages")).CollectionPage }));
+const CoursePage = lazy(async () => ({ default: (await import("./pages/ContentPages")).CoursePage }));
+const InstitutionPage = lazy(async () => ({ default: (await import("./pages/ContentPages")).InstitutionPage }));
+const MissingPage = lazy(async () => ({ default: (await import("./pages/ContentPages")).MissingPage }));
+const StaticPage = lazy(async () => ({ default: (await import("./pages/ContentPages")).StaticPage }));
+const ChecklistToolPage = lazy(async () => ({ default: (await import("./pages/ToolsPages")).ChecklistToolPage }));
+const IdeasToolPage = lazy(async () => ({ default: (await import("./pages/ToolsPages")).IdeasToolPage }));
+const OdsToolPage = lazy(async () => ({ default: (await import("./pages/ToolsPages")).OdsToolPage }));
+
+function RouteLoading() {
+  return <div className="route-loading" role="status" aria-label="Carregando conteúdo"><span /><span /><span /></div>;
+}
 
 function Router() {
-  return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+  return <Suspense fallback={<RouteLoading />}><Switch>
+    <Route path="/" component={Home} />
+    <Route path="/buscar/" component={SearchPage} />
+    <Route path="/ferramentas/" component={() => <CollectionPage type="ferramentas" />} />
+    <Route path="/ferramentas/gerador-de-ideias/" component={IdeasToolPage} />
+    <Route path="/ferramentas/seletor-de-ods/" component={OdsToolPage} />
+    <Route path="/ferramentas/checklist-relatorio/" component={ChecklistToolPage} />
+    <Route path="/cursos/" component={() => <CollectionPage type="cursos" />} />
+    <Route path="/cursos/:slug/">{(params) => <CoursePage slug={params.slug} />}</Route>
+    <Route path="/faculdades/" component={() => <CollectionPage type="faculdades" />} />
+    <Route path="/faculdades/:slug/">{(params) => <InstitutionPage slug={params.slug} />}</Route>
+    <Route path="/guias/" component={() => <CollectionPage type="guias" />} />
+    <Route path="/sobre/" component={() => <StaticPage page="sobre" />} />
+    <Route path="/politica-de-privacidade/" component={() => <StaticPage page="privacidade" />} />
+    <Route path="/termos-de-uso/" component={() => <StaticPage page="termos" />} />
+    <Route path="/:slug/">{(params) => <ArticlePage slug={params.slug} />}</Route>
+    <Route component={MissingPage} />
+  </Switch></Suspense>;
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
+export default function App() {
+  return <ErrorBoundary><Router /></ErrorBoundary>;
 }
-
-export default App;
