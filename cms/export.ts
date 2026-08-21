@@ -46,8 +46,19 @@ export function buildPayload(db: Db) {
 
   const institutions = pages.filter((p) => p.kind === "institution").map((p) => {
     const e = j(p.extra);
-    return { slug: p.slug, name: e.name, summary: e.summary, tone: e.tone,
-             reviewedAt: brDate(p.reviewed_at), intent: p.intent };
+    return {
+      slug: p.slug, name: e.name, summary: e.summary, tone: e.tone,
+      reviewedAt: brDate(p.reviewed_at), intent: p.intent,
+      // Sem isto a página de faculdade cai no texto fixo do componente — que é o
+      // mesmo para todas, exatamente o problema do §18 do PRD.
+      title: p.title, description: p.description, quickAnswer: p.quick_answer ?? "",
+      tags: j(p.tags), related: j(p.related),
+      sections: byPage(sections, p.slug).map((s) => ({
+        title: s.title, paragraphs: j(s.paragraphs),
+        ...(j(s.bullets).length ? { bullets: j(s.bullets) } : {}),
+      })),
+      sources: byPage(sources, p.slug).map((s) => ({ institution: s.institution, title: s.title, url: s.url, accessedAt: s.accessed_at })),
+    };
   });
 
   const collection = (name: string) => {

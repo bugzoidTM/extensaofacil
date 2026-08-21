@@ -48,6 +48,13 @@ export type Institution = {
   tone: string;
   reviewedAt?: string;
   intent?: string;
+  title?: string;
+  description?: string;
+  quickAnswer?: string;
+  tags?: string[];
+  related?: string[];
+  sections?: { title: string; paragraphs: string[]; bullets?: string[] }[];
+  sources?: { institution: string; title: string; url: string | null; accessedAt: string | null }[];
 };
 
 export type OdsItem = { id: string; title: string; summary: string; keywords: string[] };

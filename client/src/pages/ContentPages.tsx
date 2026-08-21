@@ -57,7 +57,31 @@ export function InstitutionPage({ slug }: { slug: string }) {
   const title = `Projeto de Extensão ${institution.name}: guia para atividades extensionistas`;
   const path = `/faculdades/${institution.slug}/`;
   useSeo({ title, description: institution.summary, path, schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Faculdades", path: "/faculdades/" }, { name: institution.name, path }]), articleSchema(title, institution.summary, path, "21 de agosto de 2026")] } });
-  return <PageShell><article className="institution-page"><div className="institution-hero" style={{ "--institution-tone": institution.tone } as React.CSSProperties}><Breadcrumb items={[{ label: "Faculdades", href: "/faculdades/" }, { label: institution.name }]} /><span className="article-eyebrow">Guia de apoio</span><h1>Projeto de Extensão<br /><em>{institution.name}</em></h1><p>{institution.summary}</p><div className="verification-badge"><ShieldCheck size={18} /><span><strong>Última verificação:</strong> agosto de 2026</span></div></div><div className="institution-content section-inner"><aside className="editorial-warning"><Info size={21} /><p><strong>Antes de começar:</strong> as orientações podem variar conforme curso, disciplina e período letivo. Consulte sempre o roteiro oficial disponibilizado pela sua instituição.</p></aside><div className="two-column-copy"><section><h2>Use o roteiro como ponto de controle</h2><p>O roteiro da instituição informa os campos obrigatórios, prazos, formatos e evidências esperadas. Antes de escolher uma ideia, localize o objetivo da disciplina e destaque o que precisa aparecer no relatório.</p><p>Este portal não substitui orientações acadêmicas específicas. Ele ajuda a organizar o processo de entender, planejar, realizar e documentar sua ação.</p></section><section><h2>Um caminho seguro para se organizar</h2><ol className="number-list"><li><span>1</span><p>Leia o roteiro e marque entregas, datas e critérios.</p></li><li><span>2</span><p>Defina uma ação pequena, realista e ligada ao seu curso.</p></li><li><span>3</span><p>Confirme o local e planeje como registrar a experiência.</p></li><li><span>4</span><p>Use o checklist antes de preencher o relatório final.</p></li></ol></section></div><section className="institution-next"><div><p className="eyebrow">Organize a atividade</p><h2>Se o roteiro trouxe dúvidas, comece pelo que é possível fazer.</h2></div><div className="institution-next-actions"><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Gerar uma ideia</Link><Link href="/relatorio-final/" className="text-link">Ver guia de relatório <ArrowUpRight size={17} /></Link></div></section></div></article></PageShell>;
+  return <PageShell><article className="institution-page"><div className="institution-hero" style={{ "--institution-tone": institution.tone } as React.CSSProperties}><Breadcrumb items={[{ label: "Faculdades", href: "/faculdades/" }, { label: institution.name }]} /><span className="article-eyebrow">Guia de apoio</span><h1>Projeto de Extensão<br /><em>{institution.name}</em></h1><p>{institution.summary}</p><div className="verification-badge"><ShieldCheck size={18} /><span><strong>Última verificação:</strong> {institution.reviewedAt || "agosto de 2026"}</span></div></div><div className="institution-content section-inner"><aside className="editorial-warning"><Info size={21} /><p><strong>Antes de começar:</strong> as orientações podem variar conforme curso, disciplina e período letivo. Consulte sempre o roteiro oficial disponibilizado pela sua instituição.</p></aside>{institution.sections?.length
+        ? <div className="institution-copy">
+            {institution.quickAnswer && <p className="quick-answer">{institution.quickAnswer}</p>}
+            {institution.sections.map((section) => (
+              <section key={section.title}>
+                <h2>{section.title}</h2>
+                {section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+                {section.bullets?.length ? <ul className="section-bullets">{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
+              </section>
+            ))}
+            {institution.sources?.length ? (
+              <section className="source-list">
+                <h2>Fontes consultadas</h2>
+                <ul>{institution.sources.map((source) => (
+                  <li key={source.title}>
+                    <strong>{source.institution}</strong> — {source.url
+                      ? <a href={source.url} target="_blank" rel="noopener noreferrer nofollow">{source.title}</a>
+                      : source.title}
+                    {source.accessedAt ? <span> · acesso em {source.accessedAt}</span> : null}
+                  </li>))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+        : <div className="two-column-copy"><section><h2>Use o roteiro como ponto de controle</h2><p>O roteiro da instituição informa os campos obrigatórios, prazos, formatos e evidências esperadas. Antes de escolher uma ideia, localize o objetivo da disciplina e destaque o que precisa aparecer no relatório.</p><p>Este portal não substitui orientações acadêmicas específicas. Ele ajuda a organizar o processo de entender, planejar, realizar e documentar sua ação.</p></section><section><h2>Um caminho seguro para se organizar</h2><ol className="number-list"><li><span>1</span><p>Leia o roteiro e marque entregas, datas e critérios.</p></li><li><span>2</span><p>Defina uma ação pequena, realista e ligada ao seu curso.</p></li><li><span>3</span><p>Confirme o local e planeje como registrar a experiência.</p></li><li><span>4</span><p>Use o checklist antes de preencher o relatório final.</p></li></ol></section></div>}<section className="institution-next"><div><p className="eyebrow">Organize a atividade</p><h2>Se o roteiro trouxe dúvidas, comece pelo que é possível fazer.</h2></div><div className="institution-next-actions"><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Gerar uma ideia</Link><Link href="/relatorio-final/" className="text-link">Ver guia de relatório <ArrowUpRight size={17} /></Link></div></section></div></article></PageShell>;
 }
 
 export function CollectionPage({ type }: { type: "cursos" | "faculdades" | "guias" | "ferramentas" }) {
