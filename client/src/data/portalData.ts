@@ -24,6 +24,14 @@ export type Course = {
   places: string[];
   ods: string[];
   intent?: string;
+  title?: string;
+  description?: string;
+  quickAnswer?: string;
+  reviewedAt?: string;
+  tags?: string[];
+  related?: string[];
+  sections?: { title: string; paragraphs: string[]; bullets?: string[] }[];
+  sources?: { institution: string; title: string; url: string | null; accessedAt: string | null }[];
 };
 
 export type Guide = {

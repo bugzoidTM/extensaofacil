@@ -40,8 +40,19 @@ export function buildPayload(db: Db) {
 
   const courses = pages.filter((p) => p.kind === "course").map((p) => {
     const e = j(p.extra);
-    return { slug: p.slug, name: e.name, short: e.short, summary: e.summary, accent: e.accent,
-             ideas: e.ideas ?? [], places: e.places ?? [], ods: e.ods ?? [], intent: p.intent };
+    return {
+      slug: p.slug, name: e.name, short: e.short, summary: e.summary, accent: e.accent,
+      ideas: e.ideas ?? [], places: e.places ?? [], ods: e.ods ?? [], intent: p.intent,
+      // Mesmo motivo das faculdades: sem isto o hub de curso cai no texto montado
+      // por template dentro do componente, igual para os nove cursos.
+      title: p.title, description: p.description, quickAnswer: p.quick_answer ?? "",
+      reviewedAt: brDate(p.reviewed_at), tags: j(p.tags), related: j(p.related),
+      sections: byPage(sections, p.slug).map((s) => ({
+        title: s.title, paragraphs: j(s.paragraphs),
+        ...(j(s.bullets).length ? { bullets: j(s.bullets) } : {}),
+      })),
+      sources: byPage(sources, p.slug).map((s) => ({ institution: s.institution, title: s.title, url: s.url, accessedAt: s.accessed_at })),
+    };
   });
 
   const institutions = pages.filter((p) => p.kind === "institution").map((p) => {

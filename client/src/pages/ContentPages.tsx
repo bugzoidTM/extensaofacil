@@ -39,24 +39,50 @@ export function ArticlePage({ slug }: { slug: string }) {
 export function CoursePage({ slug }: { slug: string }) {
   const course = getCourse(slug);
   if (!course) return <MissingPage />;
-  const title = `Projeto de Extensão em ${course.name}: ideias e exemplos`;
-  const description = `Veja como transformar competências de ${course.name} em uma atividade extensionista com público, local, ODS e evidências coerentes.`;
+  // Enquanto o curso não tem conteúdo próprio no CMS, o hub cai no texto montado por
+  // template — que é idêntico para os nove cursos. Com conteúdo, usa o que foi escrito.
+  const title = course.title || `Projeto de Extensão em ${course.name}: ideias e exemplos`;
+  const description = course.description || `Veja como transformar competências de ${course.name} em uma atividade extensionista com público, local, ODS e evidências coerentes.`;
   const path = `/cursos/${course.slug}/`;
-  useSeo({ title, description, path, schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Cursos", path: "/cursos/" }, { name: course.name, path }]), articleSchema(title, description, path, "21 de agosto de 2026")] } });
+  useSeo({ title, description, path, schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Cursos", path: "/cursos/" }, { name: course.name, path }]), articleSchema(title, description, path, course.reviewedAt || "21 de agosto de 2026")] } });
   const examples = [
     { title: course.ideas[0], text: `Uma proposta direta para ${course.places[0]}, conectada a uma necessidade que você pode observar e explicar.` },
     { title: course.ideas[1], text: `Uma ação em ${course.places[1] ?? course.places[0]} que utiliza uma habilidade do curso em formato acessível ao público.` },
     { title: course.ideas[2], text: `Uma atividade com começo, desenvolvimento e devolutiva, para gerar registros coerentes no relatório.` },
   ];
-  return <PageShell><article className="hub-page"><div className="hub-hero"><Breadcrumb items={[{ label: "Cursos", href: "/cursos/" }, { label: course.name }]} /><div className="hub-hero-grid"><div><span className="article-eyebrow">Guia por curso</span><h1>Projeto de Extensão<br />em <em>{course.name}</em></h1><p>{course.summary} Use este hub para decidir o que fazer, onde realizar e como registrar a sua ação.</p><div className="hub-badges">{course.ods.map((ods) => <span key={ods}>{ods}</span>)}<span>Atividades práticas</span></div><div className="course-field-note"><span>Campo de ação</span><i /><strong>{course.places[0]}</strong><i /><strong>{course.ideas[0]}</strong></div></div><aside className="course-compass" style={{ "--course-accent": course.accent } as React.CSSProperties}><GraduationCap size={30} /><p>Comece pelas competências do seu curso e pelo que pode ser útil para um público real.</p></aside></div></div><section className="hub-section section-inner"><SectionHeading eyebrow="Ponto de partida" title="Três ideias para explorar" description="São caminhos de inspiração. Ajuste o objetivo, o público e os materiais ao roteiro e ao contexto do local." /><div className="idea-preview-grid">{examples.map((example, index) => <article key={example.title}><span>0{index + 1}</span><h3>{example.title}</h3><p>{example.text}</p><Link href="/ferramentas/gerador-de-ideias/">Adaptar esta ideia <ArrowRight size={16} /></Link></article>)}</div></section><section className="hub-band"><div className="section-inner hub-band-grid"><div><p className="eyebrow">Onde pode acontecer</p><h2>Procure contextos em que sua contribuição seja específica.</h2><p>Para {course.name}, pontos de partida comuns incluem {course.places.join(", ")}. A escolha depende de autorização, público e viabilidade.</p></div><div className="hub-list"><h3>Registros que podem ajudar</h3><ul><li><Check size={17} />Materiais e ambiente preparados</li><li><Check size={17} />Atividade em desenvolvimento, com autorização</li><li><Check size={17} />Resultado, devolutiva ou material produzido</li></ul></div></div></section><section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
+  return <PageShell><article className="hub-page"><div className="hub-hero"><Breadcrumb items={[{ label: "Cursos", href: "/cursos/" }, { label: course.name }]} /><div className="hub-hero-grid"><div><span className="article-eyebrow">Guia por curso</span><h1>Projeto de Extensão<br />em <em>{course.name}</em></h1><p>{course.summary} Use este hub para decidir o que fazer, onde realizar e como registrar a sua ação.</p><div className="hub-badges">{course.ods.map((ods) => <span key={ods}>{ods}</span>)}<span>Atividades práticas</span></div><div className="course-field-note"><span>Campo de ação</span><i /><strong>{course.places[0]}</strong><i /><strong>{course.ideas[0]}</strong></div></div><aside className="course-compass" style={{ "--course-accent": course.accent } as React.CSSProperties}><GraduationCap size={30} /><p>Comece pelas competências do seu curso e pelo que pode ser útil para um público real.</p></aside></div></div><section className="hub-section section-inner"><SectionHeading eyebrow="Ponto de partida" title="Três ideias para explorar" description="São caminhos de inspiração. Ajuste o objetivo, o público e os materiais ao roteiro e ao contexto do local." /><div className="idea-preview-grid">{examples.map((example, index) => <article key={example.title}><span>0{index + 1}</span><h3>{example.title}</h3><p>{example.text}</p><Link href="/ferramentas/gerador-de-ideias/">Adaptar esta ideia <ArrowRight size={16} /></Link></article>)}</div></section><section className="hub-band"><div className="section-inner hub-band-grid"><div><p className="eyebrow">Onde pode acontecer</p><h2>Procure contextos em que sua contribuição seja específica.</h2><p>Para {course.name}, pontos de partida comuns incluem {course.places.join(", ")}. A escolha depende de autorização, público e viabilidade.</p></div><div className="hub-list"><h3>Registros que podem ajudar</h3><ul><li><Check size={17} />Materiais e ambiente preparados</li><li><Check size={17} />Atividade em desenvolvimento, com autorização</li><li><Check size={17} />Resultado, devolutiva ou material produzido</li></ul></div></div></section>{course.sections?.length ? (
+      <section className="hub-section section-inner course-copy">
+        {course.quickAnswer && <p className="quick-answer">{course.quickAnswer}</p>}
+        {course.sections.map((section) => (
+          <section key={section.title}>
+            <h2>{section.title}</h2>
+            {section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+            {section.bullets?.length ? <ul className="section-bullets">{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
+          </section>
+        ))}
+        {course.sources?.length ? (
+          <section className="source-list">
+            <h2>Fontes consultadas</h2>
+            <ul>{course.sources.map((source) => (
+              <li key={source.title}>
+                <strong>{source.institution}</strong> — {source.url
+                  ? <a href={source.url} target="_blank" rel="noopener noreferrer nofollow">{source.title}</a>
+                  : source.title}
+                {source.accessedAt ? <span> · acesso em {source.accessedAt}</span> : null}
+              </li>))}
+            </ul>
+          </section>
+        ) : null}
+      </section>
+    ) : null}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
 }
 
 export function InstitutionPage({ slug }: { slug: string }) {
   const institution = getInstitution(slug);
   if (!institution) return <MissingPage />;
-  const title = `Projeto de Extensão ${institution.name}: guia para atividades extensionistas`;
+  const title = institution.title || `Projeto de Extensão ${institution.name}: guia para atividades extensionistas`;
   const path = `/faculdades/${institution.slug}/`;
-  useSeo({ title, description: institution.summary, path, schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Faculdades", path: "/faculdades/" }, { name: institution.name, path }]), articleSchema(title, institution.summary, path, "21 de agosto de 2026")] } });
+  useSeo({ title, description: institution.description || institution.summary, path, schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Faculdades", path: "/faculdades/" }, { name: institution.name, path }]), articleSchema(title, institution.description || institution.summary, path, institution.reviewedAt || "21 de agosto de 2026")] } });
   return <PageShell><article className="institution-page"><div className="institution-hero" style={{ "--institution-tone": institution.tone } as React.CSSProperties}><Breadcrumb items={[{ label: "Faculdades", href: "/faculdades/" }, { label: institution.name }]} /><span className="article-eyebrow">Guia de apoio</span><h1>Projeto de Extensão<br /><em>{institution.name}</em></h1><p>{institution.summary}</p><div className="verification-badge"><ShieldCheck size={18} /><span><strong>Última verificação:</strong> {institution.reviewedAt || "agosto de 2026"}</span></div></div><div className="institution-content section-inner"><aside className="editorial-warning"><Info size={21} /><p><strong>Antes de começar:</strong> as orientações podem variar conforme curso, disciplina e período letivo. Consulte sempre o roteiro oficial disponibilizado pela sua instituição.</p></aside>{institution.sections?.length
         ? <div className="institution-copy">
             {institution.quickAnswer && <p className="quick-answer">{institution.quickAnswer}</p>}

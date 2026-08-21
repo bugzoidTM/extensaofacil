@@ -46,7 +46,13 @@ export type PageInput = Partial<ReturnType<typeof getPage>> & { slug: string };
 
 export function savePage(db: Db, input: any) {
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-  const exists = db.prepare("SELECT 1 FROM pages WHERE slug = ?").get(input.slug);
+  const atual = getPage(db, input.slug);
+  const exists = !!atual;
+
+  // Um cliente que não conhece o campo `extra` mandava `{}` e apagava name, summary e
+  // tone da faculdade — a página passou a renderizar "Projeto de Extensão undefined".
+  // Campo ausente ou objeto vazio preserva o que já está gravado.
+  const extra = input.extra && Object.keys(input.extra).length ? input.extra : (atual?.extra ?? {});
   const values = {
     slug: input.slug,
     kind: input.kind ?? "guide",
@@ -57,7 +63,7 @@ export function savePage(db: Db, input: any) {
     intent: input.intent ?? "informational",
     tags: JSON.stringify(input.tags ?? []),
     related: JSON.stringify(input.related ?? []),
-    extra: JSON.stringify(input.extra ?? {}),
+    extra: JSON.stringify(extra),
     author_slug: input.author ?? null,
     published: input.published === false ? 0 : 1,
     reviewed_at: input.reviewedAt ?? null,
