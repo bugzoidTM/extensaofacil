@@ -97,9 +97,33 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 
 // ---------------------------------------------------------------------- páginas
 
+/**
+ * Cursos e faculdades não têm seções: a página é montada a partir do `extra`
+ * (ideias, locais, ODS, resumo). Contar só as seções fazia o painel listá-las
+ * como "0 palavras", parecendo lixo — e elas estão no ar.
+ */
+const extraText = (extra: any): string[] => {
+  if (!extra || typeof extra !== "object") return [];
+  return Object.values(extra).flatMap((v) =>
+    typeof v === "string" ? [v] : Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
+};
+
 const wordCount = (page: any) =>
-  [page.quickAnswer, ...page.sections.flatMap((s: any) => [s.title, ...s.paragraphs, ...s.bullets])]
+  [page.quickAnswer, ...page.sections.flatMap((s: any) => [s.title, ...s.paragraphs, ...s.bullets]),
+   ...extraText(page.extra)]
     .join(" ").trim().split(/\s+/).filter(Boolean).length;
+
+/** Descrição curta do que a página tem, para a lista do painel. */
+function resumoConteudo(page: any): string {
+  const partes: string[] = [];
+  if (page.sections.length) partes.push(`${page.sections.length} seções`);
+  const e = page.extra || {};
+  if (Array.isArray(e.ideas) && e.ideas.length) partes.push(`${e.ideas.length} ideias`);
+  if (Array.isArray(e.places) && e.places.length) partes.push(`${e.places.length} locais`);
+  if (Array.isArray(e.ods) && e.ods.length) partes.push(`${e.ods.length} ODS`);
+  if (!partes.length) partes.push("sem conteúdo");
+  return partes.join(" · ");
+}
 
 const lastPublishAt = () =>
   (db.prepare("SELECT at FROM publish_log WHERE ok = 1 ORDER BY id DESC LIMIT 1").get() as any)?.at ?? null;
@@ -113,6 +137,7 @@ app.get("/api/pages", requireAuth, (_req, res) => {
       slug: r.slug, kind: r.kind, title: r.title, intent: r.intent,
       published: !!r.published, updatedAt: r.updated_at, reviewedAt: r.reviewed_at,
       route: routeOf(r), sections: page.sections.length, words: wordCount(page),
+      resumo: resumoConteudo(page), semSecoes: page.sections.length === 0,
       pending: !since || r.updated_at > since,
     };
   }));

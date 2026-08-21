@@ -87,7 +87,7 @@ function renderList(container = $("#items")) {
       onclick: () => openPage(p.slug),
     },
       el("b", {}, p.title || p.slug),
-      el("span", {}, `${p.route} · ${p.words} palavras · ${p.sections} seções`));
+      el("span", {}, `${p.route} · ${p.words} palavras · ${p.resumo}`));
     if (p.pending) btn.querySelector("b").append(el("span", { className: "tag pending" }, "não publicado"));
     if (!p.published) btn.querySelector("b").append(el("span", { className: "tag off" }, "rascunho"));
     return btn;
