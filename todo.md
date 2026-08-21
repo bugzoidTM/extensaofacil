@@ -12,4 +12,4 @@
 - [x] Verificar a referência remota do repositório selecionado.
 - [x] Criar um commit de publicação com a versão final validada.
 - [x] Enviar a branch principal ao repositório `bugzoidTM/extensaofacil`.
-- [ ] Confirmar o commit remoto publicado.
+- [x] Confirmar o commit remoto publicado.
