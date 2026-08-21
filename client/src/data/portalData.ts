@@ -1,5 +1,13 @@
 /**
  * Direção visual: Caderno de Campo Contemporâneo — dados editoriais claros, úteis e sem promessas comerciais.
+ *
+ * O conteúdo NÃO mora mais neste arquivo: ele vem de /content/portal-data.json, gerado
+ * a partir do content.db pelo painel de edição. Isso é o que permite publicar um texto
+ * novo sem rodar `vite build` — o bundle não muda quando o conteúdo muda.
+ *
+ * As listas abaixo são `let` e ficam vazias até `loadPortalData()` rodar (em main.tsx,
+ * antes do render). Como são bindings de módulo ES, quem importa enxerga o valor
+ * atualizado sem precisar de contexto ou hook.
  */
 
 export const SITE_URL = "https://extensaofacil.com.br";
@@ -15,100 +23,8 @@ export type Course = {
   ideas: string[];
   places: string[];
   ods: string[];
+  intent?: string;
 };
-
-export const courses: Course[] = [
-  {
-    slug: "pedagogia",
-    name: "Pedagogia",
-    short: "Pedagogia",
-    summary: "Ações de leitura, aprendizagem, inclusão e apoio à comunidade escolar.",
-    accent: "#D6E862",
-    ideas: ["roda de leitura", "oficina de jogos educativos", "apoio à alfabetização"],
-    places: ["escolas", "creches", "bibliotecas comunitárias"],
-    ods: ["ODS 4", "ODS 10"],
-  },
-  {
-    slug: "enfermagem",
-    name: "Enfermagem",
-    short: "Enfermagem",
-    summary: "Educação em saúde, prevenção e cuidado próximo dos diferentes públicos.",
-    accent: "#F3B183",
-    ideas: ["educação em saúde", "roda de prevenção", "orientação de autocuidado"],
-    places: ["unidades de saúde", "centros comunitários", "ILPIs"],
-    ods: ["ODS 3", "ODS 10"],
-  },
-  {
-    slug: "administracao",
-    name: "Administração",
-    short: "Administração",
-    summary: "Organização, planejamento e fortalecimento de pequenos negócios locais.",
-    accent: "#A5D8CA",
-    ideas: ["oficina de orçamento", "mapa de processos", "planejamento de vendas"],
-    places: ["comércios", "associações", "empreendimentos locais"],
-    ods: ["ODS 8", "ODS 12"],
-  },
-  {
-    slug: "analise-e-desenvolvimento-de-sistemas",
-    name: "Análise e Desenvolvimento de Sistemas",
-    short: "ADS",
-    summary: "Inclusão digital e soluções simples para necessidades reais da comunidade.",
-    accent: "#95C8EA",
-    ideas: ["oficina de cidadania digital", "diagnóstico de presença digital", "guia de segurança online"],
-    places: ["escolas", "ONGs", "pequenos negócios"],
-    ods: ["ODS 4", "ODS 8"],
-  },
-  {
-    slug: "direito",
-    name: "Direito",
-    short: "Direito",
-    summary: "Orientação cidadã e educação sobre direitos em linguagem acessível.",
-    accent: "#D4C0F1",
-    ideas: ["roda de direitos", "cartilha cidadã", "orientação para serviços públicos"],
-    places: ["associações", "centros sociais", "escolas"],
-    ods: ["ODS 10", "ODS 16"],
-  },
-  {
-    slug: "recursos-humanos",
-    name: "Recursos Humanos",
-    short: "RH",
-    summary: "Empregabilidade, desenvolvimento profissional e organização de equipes.",
-    accent: "#F2CF7B",
-    ideas: ["currículo e entrevista", "mapeamento de competências", "oficina de carreira"],
-    places: ["escolas", "ONGs", "associações"],
-    ods: ["ODS 8", "ODS 10"],
-  },
-  {
-    slug: "biomedicina",
-    name: "Biomedicina",
-    short: "Biomedicina",
-    summary: "Popularização científica, prevenção e informação de saúde com responsabilidade.",
-    accent: "#B2DFC7",
-    ideas: ["mitos e verdades em saúde", "ação de prevenção", "educação sanitária"],
-    places: ["escolas", "unidades de saúde", "centros comunitários"],
-    ods: ["ODS 3", "ODS 4"],
-  },
-  {
-    slug: "servico-social",
-    name: "Serviço Social",
-    short: "Serviço Social",
-    summary: "Acesso a direitos, informação social e mobilização comunitária.",
-    accent: "#F0AFA5",
-    ideas: ["mapa de serviços", "roda de acesso a direitos", "orientação comunitária"],
-    places: ["CRAS", "associações", "instituições sociais"],
-    ods: ["ODS 1", "ODS 10"],
-  },
-  {
-    slug: "ciencias-contabeis",
-    name: "Ciências Contábeis",
-    short: "Contábeis",
-    summary: "Educação financeira e organização básica para pessoas e pequenos negócios.",
-    accent: "#C5DA8B",
-    ideas: ["orçamento doméstico", "controle de caixa", "planejamento financeiro"],
-    places: ["comércios", "associações", "escolas"],
-    ods: ["ODS 8", "ODS 12"],
-  },
-];
 
 export type Guide = {
   slug: string;
@@ -120,319 +36,71 @@ export type Guide = {
   quickAnswer: string;
   sections: { title: string; paragraphs: string[]; bullets?: string[] }[];
   related: string[];
+  intent?: string;
+  author?: string | null;
+  sources?: { institution: string; title: string; url: string | null; accessedAt: string | null }[];
 };
 
-export const guides: Guide[] = [
-  {
-    slug: "projeto-de-extensao",
-    title: "Projeto de Extensão: guia completo para entender e fazer o seu",
-    description: "Entenda o que é projeto de extensão, como funciona e quais etapas ajudam a planejar, executar e registrar sua atividade.",
-    eyebrow: "Guia essencial",
-    updated: "21 de agosto de 2026",
-    tags: ["começo", "planejamento", "extensão universitária"],
-    quickAnswer: "Um projeto de extensão é uma atividade em que você aplica conhecimentos do seu curso em diálogo com uma necessidade real da comunidade. Normalmente, o processo envolve identificar um problema, escolher um público e um local, planejar uma ação viável, executá-la e registrar os resultados e as evidências no relatório final.",
-    sections: [
-      { title: "O que é projeto de extensão", paragraphs: ["A extensão aproxima a formação universitária da sociedade. Em vez de trabalhar apenas com um tema em sala, você observa uma necessidade concreta e propõe uma ação compatível com as competências do seu curso.", "O formato exato pode variar entre instituições e disciplinas. Por isso, o roteiro oficial da sua faculdade é sempre a referência para prazos, campos obrigatórios e critérios de avaliação."] },
-      { title: "Para que serve", paragraphs: ["O objetivo não é apenas cumprir uma disciplina. Uma boa ação extensionista produz aprendizado aplicado, cria uma contribuição possível para o público atendido e deixa um registro claro do que foi feito."] },
-      { title: "As etapas que deixam o projeto possível", paragraphs: ["Comece pequeno e concreto. A melhor escolha costuma ser uma necessidade que você consegue entender, uma atividade que cabe no tempo disponível e um resultado que pode ser observado."], bullets: ["Defina o problema e o público beneficiado.", "Escolha um local que aceite e facilite a ação.", "Relacione a proposta às competências do curso e ao ODS mais adequado.", "Planeje materiais, datas, responsáveis e evidências.", "Execute, registre e reflita sobre o resultado."] },
-      { title: "Erros que vale evitar", paragraphs: ["Evite propor uma atividade grande demais, escolher ODS apenas pelo nome ou deixar fotos e depoimentos para a última hora. Planejamento simples, comunicação com o local e registro durante a ação reduzem os problemas mais comuns."] },
-    ],
-    related: ["como-fazer-projeto-de-extensao", "ideias-projeto-de-extensao", "onde-realizar"],
-  },
-  {
-    slug: "como-fazer-projeto-de-extensao",
-    title: "Como fazer projeto de extensão: passo a passo prático",
-    description: "Veja como escolher tema, público, local, ODS, atividade e evidências para montar um projeto de extensão possível de executar.",
-    eyebrow: "Planejamento",
-    updated: "21 de agosto de 2026",
-    tags: ["passo a passo", "plano de ação", "curso"],
-    quickAnswer: "Para fazer um projeto de extensão, parta de uma necessidade simples de um público real. Depois, transforme essa necessidade em uma atividade compatível com seu curso, escolha onde ela pode acontecer, associe um ODS coerente e planeje como vai comprovar o que foi realizado.",
-    sections: [
-      { title: "1. Comece pelo problema, não pelo título", paragraphs: ["Em vez de procurar um nome bonito para o projeto, descreva uma situação que merece atenção: crianças com pouco acesso à leitura, idosos com dúvidas sobre prevenção, pequenos negócios sem organização financeira ou moradores sem informação sobre um serviço público."] },
-      { title: "2. Escolha um público e um local", paragraphs: ["O público define a linguagem e o tamanho da ação. O local deve ser acessível, ter alguém responsável para conversar com você e permitir o registro das atividades de maneira ética."] },
-      { title: "3. Desenhe uma atividade simples", paragraphs: ["Uma oficina, roda de conversa, orientação guiada, diagnóstico básico ou material educativo pode ter mais valor que uma ação complexa e difícil de concluir. Liste o que acontece do início ao fim e quais materiais são realmente necessários."] },
-      { title: "4. Prepare o registro antes de executar", paragraphs: ["Defina quais fotos são pertinentes, como pedirá autorização, quem poderá dar um depoimento e quais resultados poderá observar. Essa preparação torna o relatório mais fiel e evita inventar detalhes depois."] },
-    ],
-    related: ["projeto-de-extensao", "ods", "evidencias"],
-  },
-  {
-    slug: "ideias-projeto-de-extensao",
-    title: "Ideias para projeto de extensão: como encontrar uma proposta viável",
-    description: "Encontre critérios e exemplos para escolher ideias de extensão alinhadas ao curso, ao público, ao local e ao ODS.",
-    eyebrow: "Inspiração com propósito",
-    updated: "21 de agosto de 2026",
-    tags: ["ideias", "curso", "ação"],
-    quickAnswer: "Uma ideia de extensão fica mais forte quando combina quatro elementos: uma necessidade observável, um público definido, uma competência do seu curso e uma ação viável no local escolhido. Não procure a ideia perfeita; procure uma proposta que você consiga executar, registrar e explicar com honestidade.",
-    sections: [
-      { title: "Um filtro simples para escolher bem", paragraphs: ["Antes de se decidir, responda: qual problema vou enfrentar, para quem, com qual conhecimento do meu curso e em que contexto? Se uma resposta estiver vaga, a ideia ainda precisa amadurecer."] },
-      { title: "Ideias que nascem do contexto", paragraphs: ["Em uma escola, uma atividade pode apoiar leitura, orientação profissional ou cidadania digital. Em um comércio, pode trabalhar organização, atendimento ou finanças. Em uma unidade de saúde, pode transformar informação técnica em orientação preventiva."] },
-      { title: "Como adaptar sem copiar", paragraphs: ["Uma mesma modalidade de ação pode servir a cursos diferentes, mas o objetivo, a linguagem e a entrega precisam mudar. Uma oficina de orçamento feita por Administração não é igual a uma roda sobre finanças conduzida por Ciências Contábeis; cada uma mobiliza competências e resultados próprios."] },
-    ],
-    related: ["como-fazer-projeto-de-extensao", "onde-realizar", "ods"],
-  },
-  {
-    slug: "relatorio-final",
-    title: "Relatório final de atividades extensionistas: como organizar o seu",
-    description: "Entenda como reunir objetivo, descrição da ação, resultados, conclusão, evidências e reflexão em um relatório final consistente.",
-    eyebrow: "Documentação",
-    updated: "21 de agosto de 2026",
-    tags: ["relatório", "resultados", "conclusão"],
-    quickAnswer: "O relatório final explica o que foi planejado, o que realmente aconteceu e o que a atividade gerou. Para preenchê-lo bem, use registros feitos durante a ação: datas, local, público, sequência da atividade, resultados observados, evidências permitidas e uma reflexão honesta sobre o processo.",
-    sections: [
-      { title: "Organize os dados antes de escrever", paragraphs: ["Separe roteiro da disciplina, anotações, fotos autorizadas, lista de materiais e mensagens importantes do local. Isso reduz a chance de omitir detalhes ou preencher campos de memória."] },
-      { title: "Escreva o que aconteceu, sem exagerar", paragraphs: ["No campo sobre a ação, descreva a sequência de forma objetiva: recepção, apresentação, atividade realizada, participação do público e encerramento. Nos resultados, indique efeitos observáveis sem afirmar impacto que não foi medido."] },
-      { title: "Conclusão e percepção não são repetição", paragraphs: ["A conclusão retoma o objetivo e avalia se ele foi atendido. Já a percepção mostra o que você aprendeu sobre a experiência, os limites encontrados e o que faria diferente em uma próxima ação."] },
-    ],
-    related: ["evidencias", "como-fazer-projeto-de-extensao", "ods"],
-  },
-  {
-    slug: "ods",
-    title: "ODS no projeto de extensão: como escolher o objetivo mais coerente",
-    description: "Saiba como relacionar sua atividade extensionista aos Objetivos de Desenvolvimento Sustentável sem escolher apenas pelo título.",
-    eyebrow: "Impacto e propósito",
-    updated: "21 de agosto de 2026",
-    tags: ["ODS", "impacto", "planejamento"],
-    quickAnswer: "Para escolher um ODS, olhe primeiro para o problema que sua ação enfrenta e para o resultado que pretende apoiar. Depois, verifique qual objetivo descreve melhor essa contribuição. ODS não é enfeite no relatório: ele ajuda a explicar por que a atividade é socialmente relevante.",
-    sections: [
-      { title: "Do problema ao objetivo", paragraphs: ["Uma ação de prevenção em saúde costuma dialogar com o ODS 3. Atividades de aprendizagem e letramento podem se relacionar ao ODS 4. Projetos de orientação para trabalho e renda podem apontar para o ODS 8. A relação deve ser explicada com uma frase clara."] },
-      { title: "Um ODS principal é suficiente", paragraphs: ["Você pode reconhecer relações secundárias, mas um ODS principal torna a justificativa mais precisa. Escolha dois ou três somente quando houver conexão real e explicável com a mesma atividade."] },
-      { title: "Escrevendo a justificativa", paragraphs: ["Uma boa justificativa une ação e efeito esperado: 'A oficina de organização financeira se relaciona ao ODS 8 porque oferece conhecimentos básicos que podem apoiar decisões de trabalho e renda de pequenos empreendedores.'"] },
-    ],
-    related: ["ferramentas/seletor-de-ods", "projeto-de-extensao", "ideias-projeto-de-extensao"],
-  },
-  {
-    slug: "onde-realizar",
-    title: "Onde realizar projeto de extensão: como escolher um local adequado",
-    description: "Veja como avaliar escolas, ONGs, comércios, associações e outras instituições para realizar uma atividade extensionista.",
-    eyebrow: "Campo de ação",
-    updated: "21 de agosto de 2026",
-    tags: ["local", "instituição", "parceria"],
-    quickAnswer: "Um bom local para projeto de extensão é aquele que tem relação com o problema, acesso ao público e abertura para a atividade. Escola, ONG, associação, comércio, unidade de saúde e instituição social podem funcionar, desde que a ação seja combinada previamente e respeite a rotina do espaço.",
-    sections: [
-      { title: "O que observar antes de combinar", paragraphs: ["Converse com um responsável, explique sua proposta em poucas frases e pergunte sobre horários, quantidade de pessoas, espaço disponível e cuidados necessários. Não trate o local como cenário: ele é parceiro da ação."] },
-      { title: "Locais e ações possíveis", paragraphs: ["Escolas costumam acolher ações educativas; comércios e empreendedores podem se beneficiar de orientações de gestão; instituições sociais permitem atividades de informação e convivência; unidades de saúde podem apoiar educação preventiva quando há autorização e escopo apropriado."] },
-      { title: "Respeito, autorização e privacidade", paragraphs: ["Peça autorização para usar imagem e depoimento conforme as regras do local e do seu roteiro. Quando não for possível fotografar pessoas, registre materiais, ambiente, cartazes produzidos ou momentos que não identifiquem participantes."] },
-    ],
-    related: ["ideias-projeto-de-extensao", "evidencias", "como-fazer-projeto-de-extensao"],
-  },
-  {
-    slug: "evidencias",
-    title: "Evidências do projeto de extensão: fotos, registros e cuidados",
-    description: "Aprenda a organizar evidências éticas e úteis para mostrar o planejamento, a realização e os resultados da sua atividade extensionista.",
-    eyebrow: "Registro responsável",
-    updated: "21 de agosto de 2026",
-    tags: ["fotos", "evidências", "registro"],
-    quickAnswer: "Evidências são registros que ajudam a comprovar o que foi realizado: fotos autorizadas, materiais usados, lista de presença quando permitida, anotações da atividade, produções do público e depoimentos. Elas devem ser planejadas antes, respeitar a privacidade das pessoas e corresponder ao que você descreve no relatório.",
-    sections: [
-      { title: "O que pode servir como evidência", paragraphs: ["Fotos do ambiente, do material preparado, da atividade em andamento ou do resultado produzido podem ser úteis quando autorizadas. Também vale registrar roteiro, cartazes, planilhas, devolutivas e dados simples que não identifiquem participantes indevidamente."] },
-      { title: "Uma sequência de fotos que conta a história", paragraphs: ["Em geral, três momentos ajudam: preparação, realização e resultado. Prefira registros que contextualizem a atividade a poses genéricas. Uma legenda curta com data, local e situação deixa o material mais compreensível."] },
-      { title: "Cuidados indispensáveis", paragraphs: ["Não exponha menores, prontuários, dados pessoais ou pessoas que não autorizaram imagem. Siga o roteiro institucional e as orientações do local. Quando houver dúvida, priorize registros do espaço e dos materiais, não dos rostos."] },
-    ],
-    related: ["relatorio-final", "onde-realizar", "projeto-de-extensao"],
-  },
-];
+export type Institution = {
+  slug: string;
+  name: string;
+  summary: string;
+  tone: string;
+  reviewedAt?: string;
+  intent?: string;
+};
 
-guides.push(
-  {
-    slug: "relatorio-final/resultado-da-acao",
-    title: "Resultado da ação no projeto de extensão: como escrever com clareza",
-    description: "Saiba como descrever os resultados observados de uma atividade extensionista sem exageros e com base no que realmente aconteceu.",
-    eyebrow: "Relatório final",
-    updated: "21 de agosto de 2026",
-    tags: ["resultado da ação", "relatório", "registro"],
-    quickAnswer: "O resultado da ação mostra os efeitos que você conseguiu observar depois da atividade. Escreva com base em fatos: participação do público, dúvidas respondidas, materiais produzidos, orientações compartilhadas ou devolutivas recebidas. Não é preciso prometer uma transformação ampla; é mais útil explicar o que ocorreu de forma concreta.",
-    sections: [
-      { title: "Diferencie atividade e resultado", paragraphs: ["A atividade é o que você fez; o resultado é o que aconteceu a partir disso. Por exemplo, 'foi realizada uma roda de conversa' descreve a ação. Já 'os participantes puderam esclarecer dúvidas sobre...' indica um resultado percebido."] },
-      { title: "Use evidências que você realmente possui", paragraphs: ["Anotações, devolutivas autorizadas, materiais preenchidos, quantidade de participantes quando esse dado foi registrado e observações do responsável pelo local podem apoiar o texto. Prefira expressões como 'foi possível observar' e 'os participantes relataram' quando forem verdadeiras."] },
-      { title: "Uma estrutura simples para preencher", paragraphs: ["Retome o objetivo, apresente o que foi observado e explique a contribuição possível. Se algo não saiu como planejado, registre o ajuste realizado. Transparência melhora a qualidade da reflexão e protege a coerência do relatório."] },
-    ],
-    related: ["relatorio-final", "evidencias", "relatorio-final/conclusao"],
-  },
-  {
-    slug: "relatorio-final/percepcao",
-    title: "Percepção das atividades extensionistas: como refletir no relatório",
-    description: "Entenda o que escrever na percepção das atividades extensionistas e como transformar a experiência em uma reflexão honesta.",
-    eyebrow: "Relatório final",
-    updated: "21 de agosto de 2026",
-    tags: ["percepção", "reflexão", "relatório"],
-    quickAnswer: "A percepção é a sua reflexão sobre a experiência. Ela mostra o que você aprendeu, quais limites encontrou, que decisões precisou tomar e como a ação se conectou à formação profissional. Uma boa percepção não repete a descrição da atividade: ela interpreta o que a vivência ensinou.",
-    sections: [
-      { title: "O que essa parte do relatório pede", paragraphs: ["Use a percepção para olhar a atividade do seu ponto de vista como estudante. Você pode falar sobre a comunicação com o público, a adaptação de uma explicação técnica, a importância do planejamento ou a descoberta de uma necessidade que não conhecia."] },
-      { title: "Perguntas que ajudam a refletir", paragraphs: ["Pergunte-se: o que aprendi sobre o público? Qual conhecimento do curso consegui aplicar? O que funcionou melhor? O que faria diferente? As respostas produzem um texto pessoal sem precisar inventar emoções ou resultados."] },
-      { title: "Evite frases genéricas", paragraphs: ["Em vez de afirmar apenas que a atividade foi enriquecedora, diga por que ela foi relevante. Uma reflexão específica pode mostrar que você precisou simplificar uma orientação, reorganizar o tempo ou ouvir uma demanda que alterou a atividade planejada."] },
-    ],
-    related: ["relatorio-final", "relatorio-final/resultado-da-acao", "relatorio-final/conclusao"],
-  },
-  {
-    slug: "relatorio-final/depoimento-instituicao",
-    title: "Depoimento da instituição: como solicitar e registrar com respeito",
-    description: "Veja como pedir um depoimento à instituição parceira e registrar a devolutiva de forma ética no projeto de extensão.",
-    eyebrow: "Relatório final",
-    updated: "21 de agosto de 2026",
-    tags: ["depoimento", "instituição", "ética"],
-    quickAnswer: "O depoimento da instituição é uma devolutiva de alguém que acompanhou ou recebeu a ação. Peça apenas quando fizer sentido e quando houver autorização. Explique brevemente o objetivo, ofereça uma pergunta simples e registre fielmente o que foi dito, sem editar para parecer mais impactante.",
-    sections: [
-      { title: "Quando pedir um depoimento", paragraphs: ["O melhor momento costuma ser após a atividade, quando a pessoa responsável pelo local consegue comentar a experiência com tranquilidade. Não pressione participantes nem use o depoimento como requisito se o roteiro da disciplina não o solicitar."] },
-      { title: "Uma pergunta aberta já basta", paragraphs: ["Você pode perguntar: 'Como você percebeu a atividade realizada?' ou 'Que ponto da ação foi mais útil para este contexto?'. Deixe claro que a pessoa pode responder de forma breve ou recusar o registro."] },
-      { title: "Como usar no relatório", paragraphs: ["Informe quem autorizou a fala e qual era seu vínculo com o local, respeitando as regras de identificação. Se não houver autorização para citar o nome, descreva a função de maneira genérica, como 'responsável pela instituição parceira'."] },
-    ],
-    related: ["onde-realizar", "evidencias", "relatorio-final"],
-  },
-  {
-    slug: "relatorio-final/conclusao",
-    title: "Conclusão do projeto de extensão: como encerrar o relatório",
-    description: "Aprenda a escrever uma conclusão de projeto de extensão conectando objetivo, realização, resultados e aprendizado sem repetir o relatório.",
-    eyebrow: "Relatório final",
-    updated: "21 de agosto de 2026",
-    tags: ["conclusão", "relatório", "avaliação"],
-    quickAnswer: "A conclusão encerra o relatório retomando o objetivo da ação e avaliando, com honestidade, o que foi possível realizar. Ela não precisa repetir cada etapa. Mostre a relação entre proposta, atividade desenvolvida, resultado observado e aprendizado que ficou para você e para o contexto atendido.",
-    sections: [
-      { title: "Retome o objetivo em uma frase", paragraphs: ["Comece lembrando qual necessidade a atividade buscou apoiar. Depois, indique se a ação conseguiu cumprir aquilo que se propôs a fazer dentro do tempo, do local e dos recursos disponíveis."] },
-      { title: "Avalie sem transformar a conclusão em propaganda", paragraphs: ["Nem toda atividade gera um efeito amplo ou imediato. Uma conclusão forte reconhece a contribuição possível, aponta limites quando existiram e valoriza o que foi aprendido no processo."] },
-      { title: "Feche com continuidade realista", paragraphs: ["Você pode mencionar o que poderia ser aprofundado em uma ação futura, desde que isso surja da experiência realizada. Uma sugestão prática — como ampliar o tempo de oficina ou adaptar o material a outro público — é mais útil que uma promessa vaga."] },
-    ],
-    related: ["relatorio-final", "relatorio-final/resultado-da-acao", "relatorio-final/percepcao"],
-  },
-  {
-    slug: "como-tirar-fotos-projeto-extensao",
-    title: "Como tirar fotos para projeto de extensão com ética e contexto",
-    description: "Planeje evidências fotográficas úteis para o projeto de extensão, respeitando autorização, privacidade e a história real da atividade.",
-    eyebrow: "Evidências",
-    updated: "21 de agosto de 2026",
-    tags: ["fotos", "evidências", "autorização"],
-    quickAnswer: "Boas fotos de extensão mostram contexto, atividade e resultado sem expor pessoas indevidamente. Planeje antes o que precisa ser registrado, confirme a autorização do local e prefira imagens que ajudem alguém a entender o que aconteceu, em vez de fotos posadas sem relação com a ação.",
-    sections: [
-      { title: "Registre três momentos", paragraphs: ["Uma sequência simples é suficiente: preparação do espaço ou material, desenvolvimento da atividade e resultado ou encerramento. Isso cria uma narrativa visual coerente para acompanhar a descrição escrita."] },
-      { title: "Privacidade vem antes da evidência", paragraphs: ["Não fotografe rostos, crianças, dados pessoais, prontuários ou situações sensíveis sem autorização adequada. Quando houver dúvida, faça registros de materiais, do ambiente, das mãos em atividade ou de produções que não identifiquem participantes."] },
-      { title: "Complete a imagem com uma legenda", paragraphs: ["Anote data, local e o que está acontecendo em cada registro. Uma legenda objetiva evita que a foto fique solta no relatório e ajuda você a lembrar do contexto quando for escrever os resultados."] },
-    ],
-    related: ["evidencias", "onde-realizar", "relatorio-final"],
-  },
-  {
-    slug: "cursos/pedagogia/ideias",
-    title: "Ideias de projeto de extensão em Pedagogia",
-    description: "Explore ideias de extensão em Pedagogia ligadas a leitura, aprendizagem, inclusão e participação da comunidade escolar.",
-    eyebrow: "Ideias por curso",
-    updated: "21 de agosto de 2026",
-    tags: ["Pedagogia", "ideias", "educação"],
-    quickAnswer: "Em Pedagogia, uma boa ideia de extensão parte de uma necessidade de aprendizagem, convivência ou acesso a práticas educativas. Roda de leitura, jogos inclusivos, apoio à alfabetização e mediação com famílias podem funcionar quando o objetivo, o público e o local são definidos com cuidado.",
-    sections: [
-      { title: "Leitura que conversa com o território", paragraphs: ["Uma roda de leitura em biblioteca, escola ou instituição social pode ser planejada a partir da faixa etária e dos interesses do público. O foco não é apenas ler: é criar uma mediação, fazer perguntas e registrar como as pessoas participaram."] },
-      { title: "Jogos educativos com objetivo claro", paragraphs: ["Uma oficina de jogos pode apoiar concentração, linguagem, matemática básica ou cooperação. Escolha poucos materiais, explique as regras e observe se a atividade está adequada ao tempo e ao contexto do grupo."] },
-      { title: "Apoio à alfabetização sem prometer solução total", paragraphs: ["Atividades breves de consciência fonológica, contação de histórias ou produção de cartazes podem contribuir para o contato com leitura e escrita. Descreva a proposta como apoio educativo, respeitando o trabalho permanente da escola e dos educadores."] },
-    ],
-    related: ["cursos/pedagogia", "ods", "onde-realizar"],
-  },
-  {
-    slug: "cursos/enfermagem/ideias",
-    title: "Ideias de projeto de extensão em Enfermagem",
-    description: "Encontre ideias de extensão em Enfermagem para educação em saúde, prevenção, autocuidado e informação responsável.",
-    eyebrow: "Ideias por curso",
-    updated: "21 de agosto de 2026",
-    tags: ["Enfermagem", "ideias", "saúde"],
-    quickAnswer: "Em Enfermagem, as ideias extensionistas ganham força quando traduzem informação de saúde em orientação clara para um público específico. Rodas de prevenção, materiais educativos, conversas sobre autocuidado e esclarecimento de dúvidas podem ser úteis quando realizados dentro do escopo e do local apropriados.",
-    sections: [
-      { title: "Educação em saúde com linguagem acessível", paragraphs: ["Escolha um tema relevante para o público, como prevenção, hábitos de vida ou uso seguro de serviços. Transforme termos técnicos em exemplos cotidianos e deixe espaço para perguntas, sem substituir atendimento individual."] },
-      { title: "Roda de prevenção", paragraphs: ["Uma roda de conversa pode funcionar em unidade de saúde, instituição social ou espaço comunitário, desde que haja autorização. Use materiais simples e combine a atividade com o responsável pelo local para respeitar a rotina e as orientações existentes."] },
-      { title: "Evidências que preservam pessoas", paragraphs: ["Registre materiais, ambiente, cartazes e momentos autorizados. Em contextos de saúde, o cuidado com privacidade é indispensável; não fotografe documentos, informações clínicas ou pessoas sem consentimento."] },
-    ],
-    related: ["cursos/enfermagem", "ods", "evidencias"],
-  },
-  {
-    slug: "cursos/administracao/ideias",
-    title: "Ideias de projeto de extensão em Administração",
-    description: "Veja ideias de extensão em Administração voltadas a organização, planejamento, pequenos negócios e educação financeira.",
-    eyebrow: "Ideias por curso",
-    updated: "21 de agosto de 2026",
-    tags: ["Administração", "ideias", "negócios"],
-    quickAnswer: "Em Administração, uma ideia extensionista pode apoiar pessoas e pequenos negócios com organização, planejamento e tomada de decisão. Oficina de orçamento, mapa simples de processos, planejamento de vendas e orientação de atendimento funcionam melhor quando partem de uma necessidade que o local reconhece.",
-    sections: [
-      { title: "Oficina de orçamento e organização financeira", paragraphs: ["Para empreendedores ou famílias, trabalhe conceitos simples: entradas, saídas, prioridades e registro. Use exemplos que façam sentido para o público e deixe claro que a atividade é educativa, não uma consultoria individual completa."] },
-      { title: "Mapa de processos em pequenos negócios", paragraphs: ["Você pode convidar participantes a desenhar um fluxo básico de atendimento, estoque ou pedido. A contribuição está em ajudar a enxergar etapas, gargalos e formas de organização que possam ser testadas depois."] },
-      { title: "Planejamento de vendas com pé no chão", paragraphs: ["Uma ação pode abordar definição de público, apresentação do produto ou organização de canais de comunicação. Escolha uma entrega pequena — como um roteiro de atendimento ou calendário simples — para que a atividade termine de forma útil."] },
-    ],
-    related: ["cursos/administracao", "ods", "onde-realizar"],
-  },
-  {
-    slug: "cursos/analise-e-desenvolvimento-de-sistemas/ideias",
-    title: "Ideias de projeto de extensão em ADS",
-    description: "Explore ideias de extensão em Análise e Desenvolvimento de Sistemas focadas em inclusão digital, segurança e soluções simples.",
-    eyebrow: "Ideias por curso",
-    updated: "21 de agosto de 2026",
-    tags: ["ADS", "ideias", "tecnologia"],
-    quickAnswer: "Em ADS, as ideias de extensão podem aproximar pessoas da tecnologia de forma segura e prática. Oficina de cidadania digital, orientação de segurança online, organização de presença digital e diagnóstico básico de necessidades tecnológicas são propostas viáveis quando o público e o local estão bem definidos.",
-    sections: [
-      { title: "Cidadania digital para públicos diversos", paragraphs: ["Ensine práticas aplicáveis, como criar senhas seguras, identificar golpes, organizar arquivos ou usar serviços digitais. Ajuste a linguagem ao público e deixe tempo para que cada pessoa pratique no próprio ritmo."] },
-      { title: "Diagnóstico de presença digital", paragraphs: ["Para pequenos negócios ou instituições, uma atividade pode observar se informações essenciais estão disponíveis e se os canais de comunicação são claros. O resultado pode ser um conjunto de sugestões simples, não a promessa de desenvolver um sistema completo."] },
-      { title: "Material de apoio que continua útil", paragraphs: ["Crie um guia curto com passos, capturas de tela quando permitido ou checklist de segurança. O material pode ser a principal evidência da ação, junto com registros autorizados da oficina ou conversa."] },
-    ],
-    related: ["cursos/analise-e-desenvolvimento-de-sistemas", "evidencias", "ods"],
-  },
-  {
-    slug: "como-escolher-local-projeto-extensao",
-    title: "Como escolher local para projeto de extensão",
-    description: "Aprenda a escolher um local de projeto de extensão considerando necessidade, público, viabilidade, autorização e evidências possíveis.",
-    eyebrow: "Planejamento",
-    updated: "21 de agosto de 2026",
-    tags: ["local", "planejamento", "parceria"],
-    quickAnswer: "Para escolher um local, procure um contexto que tenha relação com a proposta, acesso ao público e abertura para a atividade. Antes de confirmar, converse com um responsável sobre horários, espaço, materiais, regras de imagem e o que a instituição considera útil. O local deve ser parceiro, não apenas cenário.",
-    sections: [
-      { title: "Comece pela necessidade, não pela conveniência", paragraphs: ["Um local próximo pode ser uma boa escolha, mas ele precisa fazer sentido para a ação. Se sua proposta é educativa, escola, creche ou biblioteca podem ser coerentes; se é de organização financeira, comércio, associação ou grupo de empreendedores pode oferecer melhor contexto."] },
-      { title: "Perguntas para fazer ao responsável", paragraphs: ["Pergunte quem é o público, quais horários são possíveis, que recursos já existem, se há limitações de espaço e como funcionam autorizações. Essa conversa melhora a proposta e evita chegar com uma atividade incompatível com a rotina do local."] },
-      { title: "Planeje registros desde o primeiro contato", paragraphs: ["Confirme o que pode ser fotografado, quem poderá oferecer devolutiva e que materiais você pode guardar como evidência. Quando o registro é combinado antes, o relatório final fica mais fiel e respeitoso."] },
-    ],
-    related: ["onde-realizar", "evidencias", "como-fazer-projeto-de-extensao"],
-  },
-)
-
-export const institutions = [
-  { slug: "anhanguera", name: "Anhanguera", summary: "Orientações para organizar a atividade extensionista a partir do seu roteiro oficial.", tone: "#D3E681" },
-  { slug: "unopar", name: "Unopar", summary: "Um guia de apoio para entender etapas, registros e documentação da extensão.", tone: "#F1BB94" },
-  { slug: "uniderp", name: "Uniderp", summary: "Conteúdos gerais para planejar uma ação com contexto e evidências.", tone: "#BBD9D3" },
-  { slug: "pitagoras", name: "Pitágoras", summary: "Pontos de partida para transformar um roteiro em um plano de ação possível.", tone: "#C8D6EE" },
-];
-
-export const odsList = [
-  { id: "ODS 3", title: "Saúde e bem-estar", summary: "Prevenção, autocuidado, informação e promoção da saúde.", keywords: ["saúde", "prevenção", "idosos", "bem-estar", "autocuidado", "unidade"] },
-  { id: "ODS 4", title: "Educação de qualidade", summary: "Aprendizagem, leitura, inclusão educacional e desenvolvimento de competências.", keywords: ["educação", "escola", "leitura", "crianças", "aprendizagem", "oficina"] },
-  { id: "ODS 8", title: "Trabalho decente e crescimento econômico", summary: "Empregabilidade, pequenos negócios, renda, planejamento e carreira.", keywords: ["trabalho", "renda", "empresa", "empreendedores", "carreira", "negócio"] },
-  { id: "ODS 10", title: "Redução das desigualdades", summary: "Acesso, inclusão, direitos e participação de públicos em situação de vulnerabilidade.", keywords: ["inclusão", "direitos", "comunidade", "acesso", "vulnerabilidade", "idosos"] },
-  { id: "ODS 11", title: "Cidades e comunidades sustentáveis", summary: "Vida comunitária, território, convivência e cuidado com espaços locais.", keywords: ["bairro", "comunidade", "cidade", "território", "associação", "moradores"] },
-  { id: "ODS 12", title: "Consumo e produção responsáveis", summary: "Consumo consciente, organização de recursos e práticas sustentáveis.", keywords: ["consumo", "resíduos", "financeiro", "recursos", "comércio", "sustentável"] },
-  { id: "ODS 16", title: "Paz, justiça e instituições eficazes", summary: "Cidadania, acesso à informação, direitos e diálogo comunitário.", keywords: ["direito", "cidadania", "justiça", "serviços", "público", "orientação"] },
-];
-
-export const checklistItems = [
-  "Dados da instituição e do local confirmados",
-  "Objetivo da ação explicado com clareza",
-  "ODS escolhido e justificado",
-  "Descrição do que aconteceu durante a ação",
-  "Resultados observados registrados",
-  "Conclusão conectada ao objetivo",
-  "Percepção pessoal escrita com honestidade",
-  "Depoimento ou devolutiva autorizado, se aplicável",
-  "Evidências organizadas e revisadas",
-  "Referências ou materiais consultados citados",
-  "Revisão final de datas, nomes e coerência",
-];
-
+export type OdsItem = { id: string; title: string; summary: string; keywords: string[] };
+export type Author = { slug: string; name: string; role: string | null; bio: string | null };
 export type SearchEntry = { title: string; description: string; href: string; category: string; tags: string[] };
+
+export let courses: Course[] = [];
+export let guides: Guide[] = [];
+export let institutions: Institution[] = [];
+export let odsList: OdsItem[] = [];
+export let checklistItems: string[] = [];
+export let authors: Author[] = [];
+export let searchIndex: SearchEntry[] = [];
 
 export const getGuide = (slug: string) => guides.find((guide) => guide.slug === slug);
 export const getCourse = (slug: string) => courses.find((course) => course.slug === slug);
 export const getInstitution = (slug: string) => institutions.find((institution) => institution.slug === slug);
 
-export const searchIndex: SearchEntry[] = [
-  ...guides.map((guide) => ({ title: guide.title, description: guide.description, href: `/${guide.slug}/`, category: guide.eyebrow, tags: guide.tags })),
-  ...courses.map((course) => ({ title: `Projeto de Extensão em ${course.name}`, description: course.summary, href: `/cursos/${course.slug}/`, category: "Curso", tags: [course.name, ...course.ideas, ...course.ods] })),
-  ...institutions.map((institution) => ({ title: `Projeto de Extensão ${institution.name}`, description: institution.summary, href: `/faculdades/${institution.slug}/`, category: "Faculdade", tags: [institution.name, "roteiro", "atividade extensionista"] })),
-  { title: "Gerador de ideias", description: "Sugestões de atividades por curso, público, local e complexidade.", href: "/ferramentas/gerador-de-ideias/", category: "Ferramenta", tags: ["ideias", "curso", "atividade"] },
-  { title: "Seletor de ODS", description: "Encontre o ODS mais coerente para sua ação.", href: "/ferramentas/seletor-de-ods/", category: "Ferramenta", tags: ["ODS", "impacto", "objetivo"] },
-  { title: "Checklist do relatório", description: "Acompanhe os itens essenciais antes de entregar o relatório final.", href: "/ferramentas/checklist-relatorio/", category: "Ferramenta", tags: ["relatório", "evidências", "conclusão"] },
-  { title: "Sobre o Extensão Fácil", description: "Conheça o propósito editorial e como usamos informações neste portal.", href: "/sobre/", category: "Institucional", tags: ["sobre", "metodologia"] },
-];
-
 export const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+function buildSearchIndex(): SearchEntry[] {
+  return [
+    ...guides.map((guide) => ({ title: guide.title, description: guide.description, href: `/${guide.slug}/`, category: guide.eyebrow, tags: guide.tags })),
+    ...courses.map((course) => ({ title: `Projeto de Extensão em ${course.name}`, description: course.summary, href: `/cursos/${course.slug}/`, category: "Curso", tags: [course.name, ...course.ideas, ...course.ods] })),
+    ...institutions.map((institution) => ({ title: `Projeto de Extensão ${institution.name}`, description: institution.summary, href: `/faculdades/${institution.slug}/`, category: "Faculdade", tags: [institution.name, "roteiro", "atividade extensionista"] })),
+    { title: "Gerador de ideias", description: "Sugestões de atividades por curso, público, local e complexidade.", href: "/ferramentas/gerador-de-ideias/", category: "Ferramenta", tags: ["ideias", "curso", "atividade"] },
+    { title: "Seletor de ODS", description: "Encontre o ODS mais coerente para sua ação.", href: "/ferramentas/seletor-de-ods/", category: "Ferramenta", tags: ["ODS", "impacto", "objetivo"] },
+    { title: "Checklist do relatório", description: "Acompanhe os itens essenciais antes de entregar o relatório final.", href: "/ferramentas/checklist-relatorio/", category: "Ferramenta", tags: ["relatório", "evidências", "conclusão"] },
+    { title: "Sobre o Extensão Fácil", description: "Conheça o propósito editorial e como usamos informações neste portal.", href: "/sobre/", category: "Institucional", tags: ["sobre", "metodologia"] },
+  ];
+}
+
+let loaded: Promise<void> | null = null;
+
+/** Carrega o conteúdo publicado. Chamado uma vez, em main.tsx, antes do primeiro render. */
+export function loadPortalData(): Promise<void> {
+  if (loaded) return loaded;
+  loaded = fetch("/content/portal-data.json", { cache: "no-cache" })
+    .then((res) => {
+      if (!res.ok) throw new Error(`portal-data.json: HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      courses = data.courses ?? [];
+      guides = data.guides ?? [];
+      institutions = data.institutions ?? [];
+      odsList = data.odsList ?? [];
+      checklistItems = data.checklistItems ?? [];
+      authors = data.authors ?? [];
+      searchIndex = buildSearchIndex();
+    });
+  return loaded;
+}
 
 export function findRelated(slugs: string[]) {
   return slugs.map(getGuide).filter((guide): guide is Guide => Boolean(guide));

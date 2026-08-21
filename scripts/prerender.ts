@@ -1,43 +1,59 @@
 /**
  * Pré-renderização estática.
  *
- * O app é um SPA: o HTML que o nginx entrega é uma casca vazia e todo o conteúdo
- * (inclusive title, description, canonical e JSON-LD, montados pelo useSeo) só
- * aparece depois que o React roda. Crawlers de IA — GPTBot, ClaudeBot, PerplexityBot —
- * e os unfurlers de link do WhatsApp/LinkedIn não executam JavaScript, então viam
- * uma <div> vazia em todas as rotas.
+ * O app é um SPA: o HTML que o nginx entrega seria uma casca vazia e todo o conteúdo
+ * (inclusive title, description, canonical e JSON-LD, montados pelo useSeo) só apareceria
+ * depois que o React roda. Crawlers de IA — GPTBot, ClaudeBot, PerplexityBot — e os
+ * unfurlers de link do WhatsApp/LinkedIn não executam JavaScript.
  *
- * Este passo roda depois do `vite build`: sobe um servidor estático sobre dist/public,
- * abre cada rota num Chromium headless, espera o React terminar e grava o DOM pronto
- * em dist/public/<rota>/index.html. O bundle continua sendo carregado pelo navegador
- * do visitante, que reassume a página normalmente.
+ * Este passo sobe um servidor estático sobre dist/public, abre cada rota num Chromium
+ * headless, espera o React terminar e grava o DOM pronto em dist/public/<rota>/index.html.
+ *
+ *   npx tsx scripts/prerender.ts                      # tudo
+ *   npx tsx scripts/prerender.ts /ods/ /cursos/direito/   # só estas rotas (publicação do painel)
+ *
+ * O conteúdo vem de content/portal-data.json (gerado do content.db), não do bundle:
+ * publicar um texto não exige `vite build`, só regravar o JSON e re-renderizar a rota.
  */
-import { chromium } from "@playwright/test";
+import { chromium, type Browser } from "@playwright/test";
 import { createServer } from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { courses, guides, institutions, SITE_URL } from "../client/src/data/portalData";
 
-const DIST = path.resolve(import.meta.dirname, "..", "dist", "public");
-const PORT = 4183;
+const REPO = path.resolve(import.meta.dirname, "..");
+const DIST = path.join(REPO, "dist", "public");
+const STATE_FILE = path.join(DIST, ".render-state.json");
+const PORT = Number(process.env.PRERENDER_PORT || 4183);
 const CONCURRENCY = 4;
 
-// Rotas sem conteúdo indexável próprio: são pré-renderizadas (para o preview de link
-// e para não sobrar casca vazia), mas ficam fora do sitemap.
+export const SITE_URL = "https://extensaofacil.com.br";
+
+/** Rotas sem conteúdo indexável próprio: pré-renderizadas, mas fora do sitemap. */
 const NOINDEX = new Set(["/buscar/"]);
 
-function allRoutes(): string[] {
-  const routes = new Set<string>([
-    "/", "/buscar/", "/projeto-de-extensao/", "/cursos/", "/faculdades/", "/guias/",
-    "/ferramentas/", "/ferramentas/gerador-de-ideias/", "/ferramentas/seletor-de-ods/",
-    "/ferramentas/checklist-relatorio/", "/sobre/", "/politica-de-privacidade/", "/termos-de-uso/",
-  ]);
-  for (const c of courses) {
+const STATIC_ROUTES = [
+  "/", "/buscar/", "/cursos/", "/faculdades/", "/guias/", "/ferramentas/",
+  "/ferramentas/gerador-de-ideias/", "/ferramentas/seletor-de-ods/", "/ferramentas/checklist-relatorio/",
+  "/sobre/", "/politica-de-privacidade/", "/termos-de-uso/",
+];
+
+type Payload = { guides: { slug: string }[]; courses: { slug: string }[]; institutions: { slug: string }[] };
+
+function loadPayload(): Payload {
+  const file = path.join(DIST, "content", "portal-data.json");
+  if (!fs.existsSync(file)) throw new Error(`${file} não existe — rode \`npx tsx cms/export.ts\` antes.`);
+  return JSON.parse(fs.readFileSync(file, "utf-8"));
+}
+
+/** Todas as rotas que o App sabe servir, derivadas do conteúdo publicado. */
+export function allRoutes(payload = loadPayload()): string[] {
+  const routes = new Set<string>(STATIC_ROUTES);
+  for (const g of payload.guides) routes.add(`/${g.slug}/`);
+  for (const c of payload.courses) {
     routes.add(`/cursos/${c.slug}/`);
     routes.add(`/cursos/${c.slug}/ideias/`);
   }
-  for (const i of institutions) routes.add(`/faculdades/${i.slug}/`);
-  for (const g of guides) routes.add(`/${g.slug}/`);
+  for (const i of payload.institutions) routes.add(`/faculdades/${i.slug}/`);
   return [...routes];
 }
 
@@ -48,35 +64,31 @@ const MIME: Record<string, string> = {
   ".txt": "text/plain", ".xml": "application/xml", ".woff2": "font/woff2",
 };
 
-function startServer() {
-  return new Promise<() => void>((resolve) => {
+function startServer(port: number) {
+  return new Promise<() => void>((resolve, reject) => {
     const server = createServer((req, res) => {
       const url = decodeURIComponent((req.url || "/").split("?")[0]);
       let file = path.join(DIST, url);
       if (!path.resolve(file).startsWith(DIST)) return res.writeHead(403).end();
       if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
-      // fallback de SPA: rota sem arquivo cai no index.html original
+      // fallback de SPA: rota ainda sem arquivo cai no index.html original
       if (!fs.existsSync(file)) file = path.join(DIST, "index.html");
       res.writeHead(200, { "content-type": MIME[path.extname(file)] || "application/octet-stream" });
       fs.createReadStream(file).pipe(res);
     });
-    server.listen(PORT, "127.0.0.1", () => resolve(() => server.close()));
+    server.on("error", reject);
+    server.listen(port, "127.0.0.1", () => resolve(() => server.close()));
   });
 }
 
 /**
- * Adianta o download da imagem de LCP.
- *
- * Sem isso o navegador só descobre a foto do hero depois de baixar e executar o bundle.
- * O preload replica o srcset/sizes do <source> WebP do <picture>, então o que for
- * pré-carregado é exatamente o que o layout vai pedir — nada de download duplicado.
+ * Adianta o download da imagem de LCP replicando o srcset/sizes do <source> WebP,
+ * para que o preload case exatamente com o que o layout vai pedir.
  */
 function injectHeroPreload(html: string): string {
   if (html.includes('rel="preload" as="image"')) return html;
-
   const picture = html.match(/<picture>(?:(?!<\/picture>)[\s\S])*?<img\b(?![^>]*loading=["']lazy["'])[^>]*>[\s\S]*?<\/picture>/i);
   let tag: string | null = null;
-
   if (picture) {
     const srcset = picture[0].match(/<source[^>]*type=["']image\/webp["'][^>]*srcset=["']([^"']+)["']/i);
     const sizes = picture[0].match(/<source[^>]*sizes=["']([^"']+)["']/i);
@@ -93,58 +105,73 @@ function injectHeroPreload(html: string): string {
   return html.replace("</head>", `  ${tag}\n  </head>`);
 }
 
-function writeSitemap(routes: string[]) {
+type State = { missing: string[] };
+const readState = (): State => {
+  try { return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")); } catch { return { missing: [] }; }
+};
+const writeState = (s: State) => fs.writeFileSync(STATE_FILE, JSON.stringify(s, null, 2));
+
+export function writeSitemap(routes: string[], missing: string[]) {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = routes
-    .filter((r) => !NOINDEX.has(r))
-    .sort((a, b) => a.localeCompare(b))
-    .map((r) => `  <url><loc>${SITE_URL}${r}</loc><lastmod>${today}</lastmod></url>`)
-    .join("\n");
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+  const list = routes.filter((r) => !NOINDEX.has(r) && !missing.includes(r)).sort((a, b) => a.localeCompare(b));
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    list.map((r) => `  <url><loc>${SITE_URL}${r}</loc><lastmod>${today}</lastmod></url>`).join("\n") +
+    `\n</urlset>\n`;
   fs.writeFileSync(path.join(DIST, "sitemap.xml"), xml);
-  // mantém o sitemap do repo em dia com as rotas que o app realmente gera
-  fs.writeFileSync(path.resolve(import.meta.dirname, "..", "client", "public", "sitemap.xml"), xml);
-  return routes.length - [...NOINDEX].filter((r) => routes.includes(r)).length;
+  fs.writeFileSync(path.join(REPO, "client", "public", "sitemap.xml"), xml);
+  return list.length;
 }
 
-async function main() {
+const routeToFile = (route: string) =>
+  route === "/" ? path.join(DIST, "index.html") : path.join(DIST, route, "index.html");
+
+/**
+ * Renderiza as rotas pedidas. Devolve as que caíram na MissingPage — o App tem rota
+ * para /cursos/<slug>/ideias/ de todo curso, mas nem todo curso tem esse conteúdo
+ * escrito. Publicar isso daria uma página "não encontrada" com status 200, então
+ * elas não geram arquivo e o nginx devolve 404 de verdade.
+ */
+export async function renderRoutes(routes: string[], opts: { quiet?: boolean; port?: number } = {}) {
   if (!fs.existsSync(path.join(DIST, "index.html"))) {
     throw new Error("dist/public/index.html não existe — rode o `vite build` antes.");
   }
-  const stop = await startServer();
-  const browser = await chromium.launch();
-  const routes = allRoutes();
-  const failures: string[] = [];
+  const port = opts.port ?? PORT;
+  const stop = await startServer(port);
+  const browser: Browser = await chromium.launch();
   const missing: string[] = [];
+  const failures: string[] = [];
+  const rendered: string[] = [];
   let done = 0;
+  const log = (msg: string) => { if (!opts.quiet) console.log(msg); };
+
+  const queue = [...routes.map((route) => ({ route, outFile: routeToFile(route) })),
+                 { route: "/rota-inexistente-para-gerar-o-404/", outFile: path.join(DIST, "404.html") }];
+  const total = queue.length;
 
   async function render(route: string, outFile: string) {
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
     try {
-      const res = await page.goto(`http://127.0.0.1:${PORT}${route}`, { waitUntil: "networkidle", timeout: 45000 });
+      const res = await page.goto(`http://127.0.0.1:${port}${route}`, { waitUntil: "networkidle", timeout: 45000 });
       if (!res || !res.ok()) throw new Error(`HTTP ${res?.status()}`);
-      // espera o React montar de verdade (o Suspense do App resolve o chunk da rota)
       await page.waitForFunction(() => {
         const root = document.getElementById("root");
         return !!root && root.children.length > 0 && !document.querySelector(".route-loading");
       }, { timeout: 30000 });
       await page.waitForFunction(() => !!document.querySelector('link[rel="canonical"]'), { timeout: 15000 });
-      // O App tem rota para /cursos/<slug>/ideias/ de todo curso, mas nem todo curso tem
-      // esse conteúdo escrito: a rota cai na MissingPage. Publicar isso daria uma página
-      // "não encontrada" respondendo 200 (soft 404). Melhor não gravar arquivo nenhum e
-      // deixar o nginx devolver 404 de verdade.
+
       const isMissing = await page.evaluate(() =>
         document.querySelector<HTMLMetaElement>('meta[name="robots"]')?.content.includes("noindex") ?? false);
       if (isMissing && !NOINDEX.has(route) && !outFile.endsWith("404.html")) {
         missing.push(route);
-        console.log(`  [${String(++done).padStart(2)}/${routes.length + 1}] ${route.padEnd(46)} sem conteúdo -> vai dar 404`);
+        fs.rmSync(path.dirname(outFile), { recursive: true, force: true });
+        log(`  [${String(++done).padStart(2)}/${total}] ${route.padEnd(46)} sem conteúdo -> 404`);
         return;
       }
       const html = injectHeroPreload("<!doctype html>\n" + (await page.content()).replace(/^<!DOCTYPE html>\n?/i, ""));
       fs.mkdirSync(path.dirname(outFile), { recursive: true });
       fs.writeFileSync(outFile, html);
-      const title = await page.title();
-      console.log(`  [${String(++done).padStart(2)}/${routes.length + 1}] ${route.padEnd(46)} ${(html.length / 1024).toFixed(0).padStart(3)} kB  ${title.slice(0, 42)}`);
+      rendered.push(route);
+      log(`  [${String(++done).padStart(2)}/${total}] ${route.padEnd(46)} ${(html.length / 1024).toFixed(0).padStart(3)} kB  ${(await page.title()).slice(0, 42)}`);
     } catch (err) {
       failures.push(`${route}: ${(err as Error).message}`);
       console.error(`  [ERRO] ${route}: ${(err as Error).message}`);
@@ -153,32 +180,49 @@ async function main() {
     }
   }
 
-  const queue = routes.map((route) => ({
-    route,
-    outFile: route === "/" ? path.join(DIST, "index.html") : path.join(DIST, route, "index.html"),
-  }));
-  // a página 404 do app, gravada como 404.html para o nginx devolver com status 404
-  queue.push({ route: "/rota-inexistente-para-gerar-o-404/", outFile: path.join(DIST, "404.html") });
-
-  const workers = Array.from({ length: CONCURRENCY }, async () => {
+  await Promise.all(Array.from({ length: CONCURRENCY }, async () => {
     let job;
     while ((job = queue.shift())) await render(job.route, job.outFile);
-  });
-  await Promise.all(workers);
+  }));
 
   await browser.close();
   stop();
-
-  const indexed = writeSitemap(routes.filter((r) => !missing.includes(r)));
-  if (missing.length) {
-    console.log(`\n  ${missing.length} rota(s) do App sem conteúdo, fora do sitemap e respondendo 404:\n   - ${missing.join("\n   - ")}`);
-  }
-  console.log(`\n  sitemap.xml regravado com ${indexed} URLs indexáveis (${NOINDEX.size} noindex fora).`);
-  if (failures.length) {
-    console.error(`\n  ${failures.length} rota(s) falharam:\n   - ${failures.join("\n   - ")}`);
-    process.exit(1);
-  }
-  console.log(`  pré-renderização concluída: ${routes.length - missing.length} rotas + 404.html\n`);
+  return { rendered, missing, failures };
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+/** Publicação incremental: re-renderiza só as rotas pedidas e atualiza o sitemap. */
+export async function renderIncremental(routes: string[]) {
+  const result = await renderRoutes(routes, { quiet: true });
+  const state = readState();
+  // as rotas desta leva substituem o que se sabia sobre elas
+  const missing = [...new Set([...state.missing.filter((r) => !routes.includes(r)), ...result.missing])];
+  writeState({ missing });
+  const indexed = writeSitemap(allRoutes(), missing);
+  return { ...result, indexed };
+}
+
+async function main() {
+  const argv = process.argv.slice(2).filter((a) => a.startsWith("/"));
+  const full = argv.length === 0;
+  const routes = full ? allRoutes() : argv;
+
+  const result = await renderRoutes(routes);
+  const state = readState();
+  const missing = full
+    ? result.missing
+    : [...new Set([...state.missing.filter((r) => !routes.includes(r)), ...result.missing])];
+  writeState({ missing });
+
+  const indexed = writeSitemap(allRoutes(), missing);
+  console.log(`\n  sitemap.xml regravado com ${indexed} URLs indexáveis.`);
+  if (missing.length) {
+    console.log(`  ${missing.length} rota(s) sem conteúdo, fora do sitemap e respondendo 404:\n   - ${missing.join("\n   - ")}`);
+  }
+  if (result.failures.length) {
+    console.error(`\n  ${result.failures.length} rota(s) falharam:\n   - ${result.failures.join("\n   - ")}`);
+    process.exit(1);
+  }
+  console.log(`  pré-renderização concluída: ${result.rendered.length} rotas + 404.html\n`);
+}
+
+if (import.meta.filename === process.argv[1]) main().catch((err) => { console.error(err); process.exit(1); });

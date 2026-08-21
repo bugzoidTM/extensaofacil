@@ -16,6 +16,7 @@ fi
 pnpm install --frozen-lockfile
 pnpm rebuild esbuild @tailwindcss/oxide >/dev/null
 npx vite build           # gera dist/public (o server/ express não é usado; quem serve é o nginx)
+npx tsx cms/export.ts          # content.db -> content/portal-data.json
 npx tsx scripts/prerender.ts   # grava um index.html pronto por rota + 404.html + sitemap.xml
 
 docker service update --force extensaofacil_site >/dev/null 2>&1 || \

@@ -33,6 +33,53 @@ services:
         - traefik.http.services.extensaofacil.loadbalancer.server.port=8080
         - traefik.http.services.extensaofacil.loadbalancer.passHostHeader=true
 
+  cms:
+    image: extensaofacil-cms:v1
+    # O painel escreve no mesmo diretório que o nginx serve: publicar grava o
+    # content/portal-data.json e o HTML pré-renderizado direto em dist/public.
+    volumes:
+      - /root/extensaofacil:/app
+    environment:
+      - PORT=8095
+      - ADMIN_PASSWORD_FILE=/run/secrets/ef_admin_password
+      - ADMIN_SECRET_FILE=/run/secrets/ef_admin_secret
+      - CONTENT_DB=/app/cms/content.db
+    secrets:
+      - ef_admin_password
+      - ef_admin_secret
+    networks:
+      - Nutef
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=Nutef
+
+        # /admin -> /admin/ (sem isso o StripPrefix entrega caminho vazio ao express)
+        - traefik.http.middlewares.extensaofacil-admin-slash.redirectregex.regex=^https://extensaofacil\.com\.br/admin$$
+        - traefik.http.middlewares.extensaofacil-admin-slash.redirectregex.replacement=https://extensaofacil.com.br/admin/
+        - traefik.http.middlewares.extensaofacil-admin-strip.stripprefix.prefixes=/admin
+
+        # prioridade maior que a do site estático, senão /admin cairia no nginx
+        - traefik.http.routers.extensaofacil-admin.rule=Host(`extensaofacil.com.br`) && PathPrefix(`/admin`)
+        - traefik.http.routers.extensaofacil-admin.entrypoints=websecure
+        - traefik.http.routers.extensaofacil-admin.priority=100
+        - traefik.http.routers.extensaofacil-admin.tls=true
+        - traefik.http.routers.extensaofacil-admin.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.extensaofacil-admin.middlewares=extensaofacil-admin-slash,extensaofacil-admin-strip
+        - traefik.http.routers.extensaofacil-admin.service=extensaofacil-admin
+        - traefik.http.services.extensaofacil-admin.loadbalancer.server.port=8095
+
+secrets:
+  ef_admin_password:
+    external: true
+  ef_admin_secret:
+    external: true
+
 networks:
   Nutef:
     external: true
