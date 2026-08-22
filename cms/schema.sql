@@ -72,3 +72,19 @@ CREATE TABLE IF NOT EXISTS publish_log (
   ok         INTEGER NOT NULL,
   detail     TEXT
 );
+
+-- Eventos de funil (PRD §36 e §72). Coletor próprio porque a Cloudflare Web Analytics
+-- não faz evento customizado. Sem cookie e sem dado pessoal: `sessao` é um id aleatório
+-- que vive só na aba do visitante.
+CREATE TABLE IF NOT EXISTS events (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  em       TEXT NOT NULL DEFAULT (datetime('now')),
+  evento   TEXT NOT NULL,
+  sessao   TEXT NOT NULL,
+  caminho  TEXT,
+  referrer TEXT,
+  props    TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_events_em ON events(em);
+CREATE INDEX IF NOT EXISTS idx_events_evento ON events(evento, em);
+CREATE INDEX IF NOT EXISTS idx_events_sessao ON events(sessao);

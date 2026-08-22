@@ -607,3 +607,15 @@ picture { display: contents; }
 .institution-copy .section-bullets, .course-copy .section-bullets { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 7px; }
 .source-list ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 8px; font-size: .93em; }
 .source-list a { text-decoration: underline; }
+
+/* CTA comercial: aparece depois do conteúdo, com peso visual menor que o do texto.
+   Nunca no hero, nunca fixo — o §32 do PRD é explícito sobre isso. */
+.commercial-cta { margin: 46px 0 8px; padding: 26px 28px; border: 1px solid var(--line, #dcd7cb);
+  border-left: 3px solid #E08D6B; border-radius: 12px; background: #fbf7f1; }
+.commercial-cta-eyebrow { margin: 0 0 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: #a8724f; font-weight: 600; }
+.commercial-cta h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.commercial-cta p { margin: 0 0 16px; font-size: .96rem; }
+.commercial-cta a { display: inline-flex; align-items: center; gap: 7px; font-weight: 600;
+  color: #0E453F; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 640px) { .commercial-cta { padding: 20px; } }

@@ -1,12 +1,15 @@
 /**
  * Direção visual: Caderno de Campo Contemporâneo — leitura editorial com trilho contextual, resposta rápida e próximos passos concretos.
  */
+import { useEffect } from "react";
 import { ArrowRight, ArrowUpRight, Check, Clock3, FileText, GraduationCap, Info, Landmark, SearchX, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import { CourseCard, GuideCard, InstitutionCard, ToolCard } from "@/components/ContentCards";
 import { AnswerBox, Breadcrumb, MetaLine, PageShell, SectionHeading } from "@/components/PortalLayout";
 import { courses, findRelated, getCourse, getGuide, getInstitution, guides, institutions, SITE_NAME, SITE_URL } from "@/data/portalData";
-import { track } from "@/lib/analytics";
+import { track, observarProfundidade } from "@/lib/analytics";
+import { CommercialHelpCTA } from "@/components/CommercialHelpCTA";
+import { clusterDe, commercialDestinations, destinoPorCluster, podeMostrarCta } from "@/data/commercial";
 import { useSeo } from "@/lib/seo";
 
 function breadcrumbSchema(items: { name: string; path: string }[]) {
@@ -17,12 +20,31 @@ function articleSchema(title: string, description: string, path: string, updated
   return { "@context": "https://schema.org", "@type": "Article", headline: title, description, mainEntityOfPage: `${SITE_URL}${path}`, datePublished: "2026-08-21", dateModified: "2026-08-21", author: { "@type": "Organization", name: "Equipe Extensão Fácil" }, publisher: { "@type": "Organization", name: SITE_NAME, logo: { "@type": "ImageObject", url: `${SITE_URL}/img/extensao-facil-mark_d761bcd0.png` } }, image: `${SITE_URL}/img/extensao-facil-hero_ba2e9b46.jpg`, about: updated };
 }
 
+/**
+ * Monta o CTA comercial da página, quando ela pode ter um (§32, §61).
+ * Devolve null quando a página não é do tipo que aceita — o silêncio é o padrão.
+ */
+function ctaDaPagina(slug: string, kind: string, intent?: string) {
+  if (!podeMostrarCta(slug, intent)) return null;
+  const cluster = clusterDe(slug, kind);
+  const destino = commercialDestinations[destinoPorCluster[cluster]];
+  if (!destino) return null;
+  return <CommercialHelpCTA
+    title={destino.titulo}
+    description={destino.descricao}
+    href={destino.href}
+    campaign={cluster}
+    content={slug}
+  />;
+}
+
 export function ArticlePage({ slug }: { slug: string }) {
   const guide = getGuide(slug);
   if (!guide) return <MissingPage />;
   const path = `/${guide.slug}/`;
   const schema = { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: guide.title, path }]), articleSchema(guide.title, guide.description, path, guide.updated)] };
   useSeo({ title: guide.title, description: guide.description, path, type: "article", schema });
+  useEffect(() => observarProfundidade(guide.slug), [guide.slug]);
   const related = findRelated(guide.related);
   return <PageShell>
     <article className="article-page" onLoad={() => track("article_view", { slug: guide.slug })}>
@@ -31,6 +53,7 @@ export function ArticlePage({ slug }: { slug: string }) {
         <aside className="toc"><p>Neste guia</p>{guide.sections.map((section, index) => <a key={section.title} href={`#secao-${index + 1}`}>{String(index + 1).padStart(2, "0")} {section.title}</a>)}<div className="toc-note"><Clock3 size={16} />Leitura objetiva, para você colocar em prática.</div></aside>
         <div className="article-body"><AnswerBox><p>{guide.quickAnswer}</p></AnswerBox>{guide.sections.map((section, index) => <section id={`secao-${index + 1}`} key={section.title} className="article-section"><h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{section.bullets && <ul className="check-list">{section.bullets.map((item) => <li key={item}><Check size={18} />{item}</li>)}</ul>}</section>)}<aside className="contextual-cta"><div><span>Próximo passo</span><h3>Quer transformar isso em uma proposta possível?</h3><p>Use o gerador para combinar curso, contexto e tipo de ação.</p></div><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Encontrar uma ideia <ArrowUpRight size={17} /></Link></aside><section className="article-sources"><h2>Fontes e cuidados editoriais</h2><p>Este guia apresenta orientações gerais. Para critérios, formulários e prazos, use sempre o roteiro da sua instituição e documentos oficiais relacionados à atividade.</p><a href="https://www.gov.br/mec" target="_blank" rel="noreferrer">Consultar informações do MEC <ArrowUpRight size={15} /></a></section></div>
       </div>
+      {ctaDaPagina(guide.slug, "guide", guide.intent)}
       <section className="article-related"><SectionHeading eyebrow="Continue por aqui" title="Conteúdos relacionados" /><div className="guide-grid">{related.map((relatedGuide) => <GuideCard guide={relatedGuide} key={relatedGuide.slug} />)}</div></section>
     </article>
   </PageShell>;
@@ -74,7 +97,7 @@ export function CoursePage({ slug }: { slug: string }) {
           </section>
         ) : null}
       </section>
-    ) : null}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
+    ) : null}{ctaDaPagina(course.slug, "course", course.intent)}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
 }
 
 export function InstitutionPage({ slug }: { slug: string }) {
@@ -107,7 +130,7 @@ export function InstitutionPage({ slug }: { slug: string }) {
               </section>
             ) : null}
           </div>
-        : <div className="two-column-copy"><section><h2>Use o roteiro como ponto de controle</h2><p>O roteiro da instituição informa os campos obrigatórios, prazos, formatos e evidências esperadas. Antes de escolher uma ideia, localize o objetivo da disciplina e destaque o que precisa aparecer no relatório.</p><p>Este portal não substitui orientações acadêmicas específicas. Ele ajuda a organizar o processo de entender, planejar, realizar e documentar sua ação.</p></section><section><h2>Um caminho seguro para se organizar</h2><ol className="number-list"><li><span>1</span><p>Leia o roteiro e marque entregas, datas e critérios.</p></li><li><span>2</span><p>Defina uma ação pequena, realista e ligada ao seu curso.</p></li><li><span>3</span><p>Confirme o local e planeje como registrar a experiência.</p></li><li><span>4</span><p>Use o checklist antes de preencher o relatório final.</p></li></ol></section></div>}<section className="institution-next"><div><p className="eyebrow">Organize a atividade</p><h2>Se o roteiro trouxe dúvidas, comece pelo que é possível fazer.</h2></div><div className="institution-next-actions"><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Gerar uma ideia</Link><Link href="/relatorio-final/" className="text-link">Ver guia de relatório <ArrowUpRight size={17} /></Link></div></section></div></article></PageShell>;
+        : <div className="two-column-copy"><section><h2>Use o roteiro como ponto de controle</h2><p>O roteiro da instituição informa os campos obrigatórios, prazos, formatos e evidências esperadas. Antes de escolher uma ideia, localize o objetivo da disciplina e destaque o que precisa aparecer no relatório.</p><p>Este portal não substitui orientações acadêmicas específicas. Ele ajuda a organizar o processo de entender, planejar, realizar e documentar sua ação.</p></section><section><h2>Um caminho seguro para se organizar</h2><ol className="number-list"><li><span>1</span><p>Leia o roteiro e marque entregas, datas e critérios.</p></li><li><span>2</span><p>Defina uma ação pequena, realista e ligada ao seu curso.</p></li><li><span>3</span><p>Confirme o local e planeje como registrar a experiência.</p></li><li><span>4</span><p>Use o checklist antes de preencher o relatório final.</p></li></ol></section></div>}{ctaDaPagina(institution.slug, "institution", institution.intent)}<section className="institution-next"><div><p className="eyebrow">Organize a atividade</p><h2>Se o roteiro trouxe dúvidas, comece pelo que é possível fazer.</h2></div><div className="institution-next-actions"><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Gerar uma ideia</Link><Link href="/relatorio-final/" className="text-link">Ver guia de relatório <ArrowUpRight size={17} /></Link></div></section></div></article></PageShell>;
 }
 
 export function CollectionPage({ type }: { type: "cursos" | "faculdades" | "guias" | "ferramentas" }) {

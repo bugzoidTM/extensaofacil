@@ -257,6 +257,73 @@ app.get("/api/status", requireAuth, (_req, res) => {
   });
 });
 
+// ------------------------------------------------------------------- eventos
+
+/**
+ * Coletor de eventos de funil, público e sem autenticação.
+ *
+ * É o único endpoint aberto deste serviço, então tem cinto e suspensório: só aceita
+ * nome de evento conhecido, corpo pequeno, e limita a taxa por IP. Não grava IP,
+ * user-agent nem qualquer coisa que identifique pessoa — só o id de sessão aleatório
+ * que o navegador gera e descarta ao fechar a aba.
+ */
+const EVENTOS_ACEITOS = new Set([
+  "page_view", "article_view", "content_depth_50", "content_depth_90",
+  "related_content_click", "tool_started", "tool_completed",
+  "apostileiros_referral_click", "external_source_click", "search_used", "internal_search",
+]);
+
+const janelas = new Map<string, { n: number; ate: number }>();
+function dentroDoLimite(ip: string, max = 120, janelaMs = 60_000) {
+  const agora = Date.now();
+  const j = janelas.get(ip);
+  if (!j || j.ate < agora) { janelas.set(ip, { n: 1, ate: agora + janelaMs }); return true; }
+  j.n += 1;
+  return j.n <= max;
+}
+// evita a tabela de IPs crescer para sempre
+setInterval(() => {
+  const agora = Date.now();
+  for (const [ip, j] of janelas) if (j.ate < agora) janelas.delete(ip);
+}, 5 * 60_000).unref?.();
+
+const insEvento = db.prepare(
+  "INSERT INTO events (evento, sessao, caminho, referrer, props) VALUES (?,?,?,?,?)");
+
+app.post("/api/events", express.json({ limit: "8kb" }), (req, res) => {
+  // resposta imediata: sendBeacon não espera e a medição não pode atrasar ninguém
+  res.status(204).end();
+  try {
+    if (!dentroDoLimite(req.ip || "?")) return;
+    const b = req.body ?? {};
+    if (typeof b.evento !== "string" || !EVENTOS_ACEITOS.has(b.evento)) return;
+    if (typeof b.sessao !== "string" || b.sessao.length > 64) return;
+    const corta = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : null);
+    insEvento.run(
+      b.evento, b.sessao, corta(b.caminho, 300), corta(b.referrer, 300),
+      JSON.stringify(b.props && typeof b.props === "object" ? b.props : {}).slice(0, 1000));
+  } catch {
+    /* medição nunca pode derrubar o serviço */
+  }
+});
+
+/** Funil agregado (§37 e §73), para o painel e para consulta rápida. */
+app.get("/api/events/resumo", requireAuth, (req, res) => {
+  const dias = Math.min(Number(req.query.dias) || 30, 365);
+  const desde = `-${dias} days`;
+  const porEvento = db.prepare(
+    "SELECT evento, COUNT(*) n, COUNT(DISTINCT sessao) sessoes FROM events WHERE em >= datetime('now', ?) GROUP BY evento ORDER BY n DESC").all(desde);
+  const porPagina = db.prepare(
+    "SELECT caminho, COUNT(*) n FROM events WHERE evento = 'apostileiros_referral_click' AND em >= datetime('now', ?) GROUP BY caminho ORDER BY n DESC LIMIT 20").all(desde);
+  const sessoes = (db.prepare("SELECT COUNT(DISTINCT sessao) n FROM events WHERE em >= datetime('now', ?)").get(desde) as any).n;
+  const cliques = (db.prepare("SELECT COUNT(DISTINCT sessao) n FROM events WHERE evento = 'apostileiros_referral_click' AND em >= datetime('now', ?)").get(desde) as any).n;
+  res.json({
+    dias, sessoes, porEvento, cliquesPorPagina: porPagina,
+    // §73: cliques no Apostileiros ÷ sessões
+    taxaReferral: sessoes ? Number((cliques / sessoes).toFixed(4)) : 0,
+  });
+});
+
 // ------------------------------------------------------------------------ painel
 
 app.use(express.static(path.join(CMS_DIR, "public")));
