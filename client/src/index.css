@@ -619,3 +619,9 @@ picture { display: contents; }
 .commercial-cta a { display: inline-flex; align-items: center; gap: 7px; font-weight: 600;
   color: #0E453F; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 640px) { .commercial-cta { padding: 20px; } }
+
+/* Fontes consultadas nos guias (§48). */
+.article-sources { margin: 40px auto 0; max-width: 760px; }
+.article-sources h2 { font-size: 1.05rem; margin: 0 0 10px; }
+.article-sources ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: .92rem; }
+.article-sources a { text-decoration: underline; text-underline-offset: 2px; }

@@ -72,7 +72,7 @@ export function Footer() {
         <div className="footer-columns">
           <div><h2>Aprenda</h2><Link href="/projeto-de-extensao/">Projeto de extensão</Link><Link href="/relatorio-final/">Relatório final</Link><Link href="/ods/">ODS</Link><Link href="/evidencias/">Evidências</Link></div>
           <div><h2>Explore</h2><Link href="/cursos/">Cursos</Link><Link href="/faculdades/">Faculdades</Link><Link href="/ferramentas/">Ferramentas</Link><Link href="/buscar/">Buscar</Link></div>
-          <div><h2>Extensão Fácil</h2><Link href="/sobre/">Sobre</Link><Link href="/politica-de-privacidade/">Privacidade</Link><Link href="/termos-de-uso/">Termos de uso</Link><a href="mailto:contato@extensaofacil.com.br">Contato</a></div>
+          <div><h2>Extensão Fácil</h2><Link href="/sobre/">Sobre</Link><Link href="/autoria/">Quem escreve</Link><Link href="/politica-de-privacidade/">Privacidade</Link><Link href="/termos-de-uso/">Termos de uso</Link><a href="mailto:contato@extensaofacil.com.br">Contato</a></div>
         </div>
       </div>
       <div className="footer-bottom"><p>© 2026 Extensão Fácil. Portal independente de orientação sobre extensão universitária.</p><a href={`${SITE_URL}/sitemap.xml`} target="_blank" rel="noreferrer">Sitemap</a></div>
@@ -102,7 +102,7 @@ export function AnswerBox({ children }: { children: React.ReactNode }) {
 }
 
 export function MetaLine({ updated, category }: { updated: string; category?: string }) {
-  return <div className="meta-line"><span>Por Equipe Extensão Fácil</span><span className="meta-dot" />{category && <span>{category}</span>}<span className="meta-dot" /><span>Atualizado em {updated}</span></div>;
+  return <div className="meta-line"><span>Por <Link href="/autoria/">Equipe Extensão Fácil</Link></span><span className="meta-dot" />{category && <span>{category}</span>}<span className="meta-dot" /><span>Atualizado em {updated}</span></div>;
 }
 
 export function CardArrow() { return <span className="card-arrow" aria-hidden="true">↗</span>; }

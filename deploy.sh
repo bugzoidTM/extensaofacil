@@ -24,4 +24,8 @@ npx tsx scripts/prerender.ts   # grava um index.html pronto por rota + 404.html 
 
 docker service update --force extensaofacil_site >/dev/null 2>&1 || \
   docker stack deploy -c /root/extensaofacil/stack.yml extensaofacil
+
+# O painel carrega export.ts e prerender.ts na subida. Sem reiniciar, a primeira
+# publicação feita por ele volta a gravar o sitemap com o código antigo.
+docker service update --force extensaofacil_cms >/dev/null 2>&1 || true
 echo "== deploy concluído: https://extensaofacil.com.br"

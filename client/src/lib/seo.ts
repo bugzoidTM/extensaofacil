@@ -8,11 +8,25 @@ type SeoOptions = {
   path: string;
   fullTitle?: boolean;
   noindex?: boolean;
+  cluster?: string;
   type?: "website" | "article";
   schema?: Record<string, unknown>;
 };
 
-const heroImage = `${SITE_URL}/img/extensao-facil-hero_ba2e9b46.jpg`;
+/**
+ * Cartão editorial por cluster, 1200x675 (§50). Sem isto, todas as 44 páginas
+ * compartilhavam a mesma imagem no Google Discover e no preview de link.
+ */
+const CARTOES: Record<string, string> = {
+  guias: "/img/og-guias.jpg",
+  "relatorio-final": "/img/og-relatorio.jpg",
+  cursos: "/img/og-cursos.jpg",
+  faculdades: "/img/og-faculdades.jpg",
+};
+
+export function cartaoDe(cluster?: string) {
+  return `${SITE_URL}${CARTOES[cluster ?? "guias"] ?? CARTOES.guias}`;
+}
 
 function setMeta(name: string, content: string, property = false) {
   const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
@@ -26,17 +40,26 @@ function setMeta(name: string, content: string, property = false) {
   element.content = content;
 }
 
-export function useSeo({ title, description, path, fullTitle = false, noindex = false, type = "website", schema }: SeoOptions) {
+export function useSeo({ title, description, path, fullTitle = false, noindex = false, type = "website", schema, cluster }: SeoOptions) {
   useEffect(() => {
     const canonical = `${SITE_URL}${path}`;
-    document.title = fullTitle ? title : `${title} | ${SITE_NAME}`;
+    // O Google corta perto de 60 caracteres. Quando o título já é longo, o sufixo
+    // "| Extensão Fácil" só ocupa o espaço que descreveria a página.
+    const comSufixo = `${title} | ${SITE_NAME}`;
+    document.title = fullTitle || comSufixo.length > 62 ? title : comSufixo;
     setMeta("description", description);
     setMeta("robots", noindex ? "noindex,follow" : "index,follow,max-image-preview:large");
     setMeta("og:title", title, true);
     setMeta("og:description", description, true);
     setMeta("og:type", type, true);
     setMeta("og:url", canonical, true);
-    setMeta("og:image", heroImage, true);
+    const cartao = cartaoDe(cluster);
+    setMeta("og:image", cartao, true);
+    setMeta("og:image:width", "1200", true);
+    setMeta("og:image:height", "675", true);
+    setMeta("og:locale", "pt_BR", true);
+    setMeta("og:site_name", SITE_NAME, true);
+    setMeta("twitter:image", cartao);
     setMeta("twitter:card", "summary_large_image");
     setMeta("twitter:title", title);
     setMeta("twitter:description", description);
@@ -56,5 +79,5 @@ export function useSeo({ title, description, path, fullTitle = false, noindex = 
       script.text = JSON.stringify(schema);
       document.head.appendChild(script);
     }
-  }, [description, fullTitle, noindex, path, schema, title, type]);
+  }, [cluster, description, fullTitle, noindex, path, schema, title, type]);
 }

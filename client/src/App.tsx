@@ -37,6 +37,7 @@ function Router() {
     <Route path="/faculdades/:slug/">{(params) => <InstitutionPage slug={params.slug} />}</Route>
     <Route path="/guias/" component={() => <CollectionPage type="guias" />} />
     <Route path="/sobre/" component={() => <StaticPage page="sobre" />} />
+    <Route path="/autoria/" component={() => <StaticPage page="autoria" />} />
     <Route path="/politica-de-privacidade/" component={() => <StaticPage page="privacidade" />} />
     <Route path="/termos-de-uso/" component={() => <StaticPage page="termos" />} />
     <Route path="/:slug/">{(params) => <ArticlePage slug={params.slug} />}</Route>

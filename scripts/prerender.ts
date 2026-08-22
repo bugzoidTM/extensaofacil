@@ -34,7 +34,7 @@ const NOINDEX = new Set(["/buscar/"]);
 const STATIC_ROUTES = [
   "/", "/buscar/", "/cursos/", "/faculdades/", "/guias/", "/ferramentas/",
   "/ferramentas/gerador-de-ideias/", "/ferramentas/seletor-de-ods/", "/ferramentas/checklist-relatorio/",
-  "/sobre/", "/politica-de-privacidade/", "/termos-de-uso/",
+  "/sobre/", "/autoria/", "/politica-de-privacidade/", "/termos-de-uso/",
 ];
 
 type Payload = { guides: { slug: string }[]; courses: { slug: string }[]; institutions: { slug: string }[] };
