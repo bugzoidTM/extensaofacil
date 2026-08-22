@@ -9,7 +9,7 @@ import { AnswerBox, Breadcrumb, MetaLine, PageShell, SectionHeading } from "@/co
 import { courses, findRelated, getCourse, getGuide, getInstitution, guides, institutions, SITE_NAME, SITE_URL } from "@/data/portalData";
 import { track, observarProfundidade } from "@/lib/analytics";
 import { CommercialHelpCTA } from "@/components/CommercialHelpCTA";
-import { clusterDe, commercialDestinations, destinoPorCluster, podeMostrarCta } from "@/data/commercial";
+import { clusterDe, destinoDaPagina, podeMostrarCta } from "@/data/commercial";
 import { cartaoDe, useSeo } from "@/lib/seo";
 
 function breadcrumbSchema(items: { name: string; path: string }[]) {
@@ -58,17 +58,17 @@ function articleSchema(title: string, description: string, path: string, updated
  * Monta o CTA comercial da página, quando ela pode ter um (§32, §61).
  * Devolve null quando a página não é do tipo que aceita — o silêncio é o padrão.
  */
-function ctaDaPagina(slug: string, kind: string, intent?: string) {
+function ctaDaPagina(slug: string, kind: string, intent?: string, nomeCurso?: string) {
   if (!podeMostrarCta(slug, intent)) return null;
-  const cluster = clusterDe(slug, kind);
-  const destino = commercialDestinations[destinoPorCluster[cluster]];
+  const destino = destinoDaPagina(slug, kind, nomeCurso);
   if (!destino) return null;
   return <CommercialHelpCTA
     title={destino.titulo}
     description={destino.descricao}
     href={destino.href}
-    campaign={cluster}
+    campaign={clusterDe(slug, kind)}
     content={slug}
+    label={destino.label}
   />;
 }
 
@@ -146,7 +146,7 @@ export function CoursePage({ slug }: { slug: string }) {
           </section>
         ) : null}
       </section>
-    ) : null}{ctaDaPagina(course.slug, "course", course.intent)}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
+    ) : null}{ctaDaPagina(course.slug, "course", course.intent, course.name)}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
 }
 
 export function InstitutionPage({ slug }: { slug: string }) {
