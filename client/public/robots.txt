@@ -1,5 +1,65 @@
+# Extensão Fácil — https://extensaofacil.com.br
+# Portal editorial de orientação sobre extensão universitária.
+#
+# Rastreamento liberado, inclusive para motores de resposta por IA: queremos ser
+# encontrados e citados. Só o painel de edição fica de fora, por não ter conteúdo
+# público algum.
+
 User-agent: *
-Allow: /
 Disallow: /admin
+Allow: /
+
+# ---------------------------------------------------------------------------
+# Buscadores e motores de resposta, nomeados explicitamente.
+#
+# Duas armadilhas evitadas aqui:
+#
+# 1. Um grupo nomeado SUBSTITUI o grupo "*" para aquele agente — ele não herda nada
+#    de lá. Por isso o "Disallow: /admin" se repete em cada bloco.
+#
+# 2. O "Disallow" vem ANTES do "Allow". Parsers que seguem a regra mais específica
+#    (o do Google) chegam ao mesmo resultado nas duas ordens, mas parsers ingênuos,
+#    de primeira-regra-que-casar, liberariam o /admin se o "Allow: /" viesse antes.
+# ---------------------------------------------------------------------------
+
+User-agent: OAI-SearchBot
+Disallow: /admin
+Allow: /
+
+User-agent: ChatGPT-User
+Disallow: /admin
+Allow: /
+
+User-agent: Claude-SearchBot
+Disallow: /admin
+Allow: /
+
+User-agent: Claude-User
+Disallow: /admin
+Allow: /
+
+User-agent: PerplexityBot
+Disallow: /admin
+Allow: /
+
+User-agent: Perplexity-User
+Disallow: /admin
+Allow: /
+
+User-agent: Googlebot
+Disallow: /admin
+Allow: /
+
+User-agent: Bingbot
+Disallow: /admin
+Allow: /
+
+User-agent: Applebot
+Disallow: /admin
+Allow: /
+
+User-agent: DuckDuckBot
+Disallow: /admin
+Allow: /
 
 Sitemap: https://extensaofacil.com.br/sitemap.xml
