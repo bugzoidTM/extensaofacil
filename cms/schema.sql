@@ -29,7 +29,11 @@ CREATE TABLE IF NOT EXISTS pages (
   -- é separada de updated_at, que registra qualquer gravação.
   reviewed_at  TEXT,
   created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Quando ESTA página foi publicada pela última vez. Antes a pendência era
+  -- calculada contra a última publicação global, então publicar uma página
+  -- marcava todas as outras como "publicadas" sem que fossem renderizadas.
+  published_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sections (

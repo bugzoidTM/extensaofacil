@@ -57,6 +57,21 @@ export function allRoutes(payload = loadPayload()): string[] {
   return [...routes];
 }
 
+/**
+ * Rotas que têm uma página do CMS por trás.
+ *
+ * `/cursos/<slug>/ideias/` é derivada do curso, mas só existe de fato se alguém
+ * escreveu o guia com aquele slug. A distinção importa na reconciliação: rota com
+ * conteúdo e sem HTML é erro a corrigir; rota sem conteúdo é 404 esperado.
+ */
+export function backedRoutes(payload = loadPayload()): Set<string> {
+  const backed = new Set<string>(STATIC_ROUTES);
+  for (const g of payload.guides) backed.add(`/${g.slug}/`);
+  for (const c of payload.courses) backed.add(`/cursos/${c.slug}/`);
+  for (const i of payload.institutions) backed.add(`/faculdades/${i.slug}/`);
+  return backed;
+}
+
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
   ".json": "application/json", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -196,8 +211,17 @@ export async function renderRoutes(routes: string[], opts: { quiet?: boolean; po
   return { rendered, missing, failures };
 }
 
-/** Publicação incremental: re-renderiza só as rotas pedidas e atualiza o sitemap. */
+/** Publicação incremental: re-renderiza as rotas pedidas e atualiza o sitemap. */
 export async function renderIncremental(routes: string[]) {
+  // Reconciliação: uma página aprovada depois de ter sido rascunho entrava no payload
+  // mas continuava sem HTML, porque ficou registrada como "missing" quando não tinha
+  // conteúdo — e nada a tirava de lá. Toda publicação agora recupera essas rotas.
+  const payload = loadPayload();
+  const backed = backedRoutes(payload);
+  const orfas = allRoutes(payload).filter(
+    (r) => backed.has(r) && !routes.includes(r) && !fs.existsSync(routeToFile(r)));
+  if (orfas.length) routes = [...routes, ...orfas];
+
   const result = await renderRoutes(routes, { quiet: true });
   const state = readState();
   // as rotas desta leva substituem o que se sabia sobre elas
