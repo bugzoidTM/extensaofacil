@@ -114,7 +114,10 @@ const extraText = (extra: any): string[] => {
 
 const wordCount = (page: any) =>
   [page.quickAnswer, ...page.sections.flatMap((s: any) => [s.title, ...s.paragraphs, ...s.bullets]),
-   ...extraText(page.extra)]
+   ...extraText(page.extra),
+   // a FAQ é texto publicado como qualquer outro; fora daqui, acrescentar perguntas
+   // deixava a página com a mesma contagem e parecendo intocada na lista
+   ...(page.faq ?? []).flatMap((f: any) => [f.q, f.a])]
     .join(" ").trim().split(/\s+/).filter(Boolean).length;
 
 /** Descrição curta do que a página tem, para a lista do painel. */
@@ -125,6 +128,7 @@ function resumoConteudo(page: any): string {
   if (Array.isArray(e.ideas) && e.ideas.length) partes.push(`${e.ideas.length} ideias`);
   if (Array.isArray(e.places) && e.places.length) partes.push(`${e.places.length} locais`);
   if (Array.isArray(e.ods) && e.ods.length) partes.push(`${e.ods.length} ODS`);
+  if (Array.isArray(page.faq) && page.faq.length) partes.push(`${page.faq.length} perguntas`);
   if (!partes.length) partes.push("sem conteúdo");
   return partes.join(" · ");
 }

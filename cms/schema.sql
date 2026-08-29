@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS pages (
   tags         TEXT NOT NULL DEFAULT '[]',   -- JSON
   related      TEXT NOT NULL DEFAULT '[]',   -- JSON de slugs
   extra        TEXT NOT NULL DEFAULT '{}',   -- JSON: campos por tipo (accent, ideas, places, ods, tone...)
+  -- Perguntas frequentes da página: JSON [{ q, a }]. Vira <FAQPage> no JSON-LD, que é
+  -- o que os motores de resposta leem para citar a página. Banco antigo ganha a coluna
+  -- pela migração do openDb (cms/db.ts).
+  faq          TEXT NOT NULL DEFAULT '[]',
   author_slug  TEXT REFERENCES authors(slug),
   published    INTEGER NOT NULL DEFAULT 1,
   -- Data mostrada na página. Só muda em revisão de verdade (PRD §49), por isso

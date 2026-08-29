@@ -166,6 +166,40 @@ function sourceEditor(page) {
   return wrap;
 }
 
+/**
+ * Perguntas frequentes.
+ *
+ * O array vira <FAQPage> no JSON-LD e o bloco visível no fim da página — os dois saem do
+ * mesmo campo de propósito, porque marcação sobre texto que o leitor não vê é o caso que
+ * o Google trata como enganosa. Resposta curta e completa: é ela que o motor de resposta cita.
+ */
+function faqEditor(page) {
+  if (!Array.isArray(page.faq)) page.faq = [];
+  const wrap = el("div");
+  const draw = () => {
+    wrap.replaceChildren(...page.faq.map((f, i) => {
+      const mover = (delta) => {
+        const j = i + delta;
+        if (j < 0 || j >= page.faq.length) return;
+        [page.faq[i], page.faq[j]] = [page.faq[j], page.faq[i]];
+        state.dirty = true; markDirty(); draw();
+      };
+      return el("div", { className: "section" },
+        el("div", { className: "head" },
+          bind(f, "q", el("input", { value: f.q || "", placeholder: "Pergunta, do jeito que a pessoa digitaria" })),
+          el("button", { onclick: () => mover(-1), title: "subir" }, "↑"),
+          el("button", { onclick: () => mover(1), title: "descer" }, "↓"),
+          el("button", { className: "danger", onclick: () => { page.faq.splice(i, 1); state.dirty = true; markDirty(); draw(); } }, "remover")),
+        field("Resposta", bind(f, "a", el("textarea", { value: f.a || "", style: "min-height:80px" })),
+          "Duas ou três frases que respondem sozinhas, sem depender do resto da página."));
+    }),
+      el("button", { onclick: () => { page.faq.push({ q: "", a: "" }); state.dirty = true; markDirty(); draw(); } },
+        "+ Adicionar pergunta"));
+  };
+  draw();
+  return wrap;
+}
+
 function extraEditor(page) {
   if (page.kind === "course") {
     const e = page.extra;
@@ -232,6 +266,8 @@ function editorView() {
     extraEditor(page),
     el("label", { style: "margin-top:22px" }, "Seções"),
     sectionEditor(page),
+    el("label", { style: "margin-top:22px" }, "Perguntas frequentes"),
+    faqEditor(page),
     el("label", { style: "margin-top:22px" }, "Fontes consultadas"),
     sourceEditor(page),
     );

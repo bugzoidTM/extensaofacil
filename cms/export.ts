@@ -34,6 +34,7 @@ export function buildPayload(db: Db) {
     })),
     related: j(p.related),
     intent: p.intent,
+    ...(j(p.faq ?? "[]").length ? { faq: j(p.faq ?? "[]") } : {}),
     author: p.author_slug,
     sources: byPage(sources, p.slug).map((s) => ({ institution: s.institution, title: s.title, url: s.url, accessedAt: s.accessed_at })),
   }));
@@ -47,6 +48,7 @@ export function buildPayload(db: Db) {
       // por template dentro do componente, igual para os nove cursos.
       title: p.title, description: p.description, quickAnswer: p.quick_answer ?? "",
       reviewedAt: brDate(p.reviewed_at), tags: j(p.tags), related: j(p.related),
+      ...(j(p.faq ?? "[]").length ? { faq: j(p.faq ?? "[]") } : {}),
       sections: byPage(sections, p.slug).map((s) => ({
         title: s.title, paragraphs: j(s.paragraphs),
         ...(j(s.bullets).length ? { bullets: j(s.bullets) } : {}),
@@ -64,6 +66,7 @@ export function buildPayload(db: Db) {
       // mesmo para todas, exatamente o problema do §18 do PRD.
       title: p.title, description: p.description, quickAnswer: p.quick_answer ?? "",
       tags: j(p.tags), related: j(p.related),
+      ...(j(p.faq ?? "[]").length ? { faq: j(p.faq ?? "[]") } : {}),
       sections: byPage(sections, p.slug).map((s) => ({
         title: s.title, paragraphs: j(s.paragraphs),
         ...(j(s.bullets).length ? { bullets: j(s.bullets) } : {}),

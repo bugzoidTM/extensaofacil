@@ -14,6 +14,9 @@ export const SITE_URL = "https://extensaofacil.com.br";
 export const SITE_NAME = "Extensão Fácil";
 export const STORAGE_PREFIX = "extensao-facil";
 
+/** Pergunta e resposta exibidas no fim da página e publicadas como FAQPage no JSON-LD. */
+export type FaqItem = { q: string; a: string };
+
 export type Course = {
   slug: string;
   name: string;
@@ -32,6 +35,7 @@ export type Course = {
   related?: string[];
   sections?: { title: string; paragraphs: string[]; bullets?: string[] }[];
   sources?: { institution: string; title: string; url: string | null; accessedAt: string | null }[];
+  faq?: FaqItem[];
 };
 
 export type Guide = {
@@ -47,6 +51,7 @@ export type Guide = {
   intent?: string;
   author?: string | null;
   sources?: { institution: string; title: string; url: string | null; accessedAt: string | null }[];
+  faq?: FaqItem[];
 };
 
 export type Institution = {
@@ -63,6 +68,7 @@ export type Institution = {
   related?: string[];
   sections?: { title: string; paragraphs: string[]; bullets?: string[] }[];
   sources?: { institution: string; title: string; url: string | null; accessedAt: string | null }[];
+  faq?: FaqItem[];
 };
 
 export type OdsItem = { id: string; title: string; summary: string; keywords: string[] };

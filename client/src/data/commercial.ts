@@ -36,6 +36,15 @@ export const destinoPorSlug: Record<string, Destino> = {
       "faz orçamento para trabalhos sob encomenda.",
     label: "Solicitar orçamento",
   },
+  "projeto-de-extensao-pronto": {
+    href: `${APOSTILEIROS}/categoria-produto/projeto-de-extensao/`,
+    titulo: "Onde ver o catálogo citado nesta página",
+    descricao:
+      "O Apostileiros é a loja parceira do Extensão Fácil e vende os modelos prontos descritos acima, " +
+      "organizados por curso, instituição e etapa. Confira curso, programa e etapa antes de comprar — " +
+      "e adapte o texto à ação que você realmente realizou.",
+    label: "Ver o catálogo de projetos de extensão",
+  },
   anhanguera: {
     href: `${APOSTILEIROS}/produto-tag/anhanguera/`,
     titulo: "Procurando material específico da Anhanguera?",
@@ -52,6 +61,17 @@ export const destinoPorSlug: Record<string, Destino> = {
       "pelo formato pedido nessa instituição.",
     label: "Ver material da Unopar",
   },
+  // A tag `pitagoras` existe, mas tinha um único produto na conferência de 29/08/2026 —
+  // mandar o leitor para uma vitrine de um item é pior que mandar para o catálogo inteiro.
+  // Por isso Pitágoras continua caindo no destino de cluster, e só Uniderp ganhou tag própria.
+  uniderp: {
+    href: `${APOSTILEIROS}/produto-tag/uniderp/`,
+    titulo: "Procurando material específico da Uniderp?",
+    descricao:
+      "O Apostileiros, loja parceira, reúne projetos de extensão e portfólios organizados " +
+      "pelo formato pedido nessa instituição.",
+    label: "Ver material da Uniderp",
+  },
 };
 
 /** Categoria da loja por curso — o destino mais próximo de quem lê um hub de curso. */
@@ -61,6 +81,13 @@ const CATEGORIA_POR_CURSO: Record<string, string> = {
   administracao: "administracao",
   "analise-e-desenvolvimento-de-sistemas": "analise-e-desenvolvimento-de-sistemas",
   direito: "direito",
+  biomedicina: "biomedicina",
+  "ciencias-contabeis": "ciencias-contabeis",
+  "servico-social": "servico-social",
+  // O slug da loja não é `recursos-humanos` — essa URL responde 404. Quatro dos nove
+  // cursos caíam no destino genérico só por falta de linha aqui; todas as nove
+  // categorias foram conferidas com produto listado em 29/08/2026.
+  "recursos-humanos": "gestao-de-recursos-humanos",
 };
 
 function destinoDeCurso(slug: string, nome: string): Destino | null {

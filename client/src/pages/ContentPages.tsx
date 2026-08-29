@@ -6,7 +6,7 @@ import { ArrowRight, ArrowUpRight, Check, Clock3, FileText, GraduationCap, Info,
 import { Link } from "wouter";
 import { CourseCard, GuideCard, InstitutionCard, ToolCard } from "@/components/ContentCards";
 import { AnswerBox, Breadcrumb, MetaLine, PageShell, SectionHeading } from "@/components/PortalLayout";
-import { courses, findRelated, getCourse, getGuide, getInstitution, guides, institutions, SITE_NAME, SITE_URL } from "@/data/portalData";
+import { courses, findRelated, getCourse, getGuide, getInstitution, guides, institutions, SITE_NAME, SITE_URL, type FaqItem } from "@/data/portalData";
 import { track, observarProfundidade } from "@/lib/analytics";
 import { CommercialHelpCTA } from "@/components/CommercialHelpCTA";
 import { clusterDe, destinoDaPagina, podeMostrarCta } from "@/data/commercial";
@@ -55,6 +55,41 @@ function articleSchema(title: string, description: string, path: string, updated
 }
 
 /**
+ * FAQPage.
+ *
+ * O bloco de perguntas é o pedaço que motor de resposta cita com mais facilidade, porque
+ * já vem em par pergunta/resposta. Sem a marcação ele é só mais um trecho de texto.
+ * Só sai quando a página tem perguntas de verdade: FAQPage vazio, ou marcado sobre texto
+ * que o leitor não vê, é marcação enganosa — por isso o schema e o bloco visível nascem
+ * do mesmo campo.
+ */
+function faqSchema(faq?: FaqItem[]) {
+  if (!faq?.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
+
+/** Monta o @graph descartando os blocos que a página não tem. */
+function grafo(...blocos: (Record<string, unknown> | null)[]) {
+  return { "@context": "https://schema.org", "@graph": blocos.filter((b): b is Record<string, unknown> => b !== null) };
+}
+
+function FaqSection({ faq }: { faq?: FaqItem[] }) {
+  if (!faq?.length) return null;
+  return <section className="article-faq section-inner" id="perguntas-frequentes">
+    <h2>Perguntas frequentes</h2>
+    <dl>{faq.map((item) => <div key={item.q}><dt>{item.q}</dt><dd>{item.a}</dd></div>)}</dl>
+  </section>;
+}
+
+/**
  * Monta o CTA comercial da página, quando ela pode ter um (§32, §61).
  * Devolve null quando a página não é do tipo que aceita — o silêncio é o padrão.
  */
@@ -77,7 +112,7 @@ export function ArticlePage({ slug }: { slug: string }) {
   if (!guide) return <MissingPage />;
   const path = `/${guide.slug}/`;
   const cluster = clusterDe(guide.slug, "guide");
-  const schema = { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: guide.title, path }]), articleSchema(guide.title, guide.description, path, guide.updated, cluster)] };
+  const schema = grafo(breadcrumbSchema([{ name: guide.title, path }]), articleSchema(guide.title, guide.description, path, guide.updated, cluster), faqSchema(guide.faq));
   useSeo({ title: guide.title, description: guide.description, path, type: "article", schema, cluster });
   useEffect(() => observarProfundidade(guide.slug), [guide.slug]);
   const related = findRelated(guide.related);
@@ -88,6 +123,7 @@ export function ArticlePage({ slug }: { slug: string }) {
         <aside className="toc"><p>Neste guia</p>{guide.sections.map((section, index) => <a key={section.title} href={`#secao-${index + 1}`}>{String(index + 1).padStart(2, "0")} {section.title}</a>)}<div className="toc-note"><Clock3 size={16} />Leitura objetiva, para você colocar em prática.</div></aside>
         <div className="article-body"><AnswerBox><p>{guide.quickAnswer}</p></AnswerBox>{guide.sections.map((section, index) => <section id={`secao-${index + 1}`} key={section.title} className="article-section"><h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{section.bullets && <ul className="check-list">{section.bullets.map((item) => <li key={item}><Check size={18} />{item}</li>)}</ul>}</section>)}<aside className="contextual-cta"><div><span>Próximo passo</span><h3>Quer transformar isso em uma proposta possível?</h3><p>Use o gerador para combinar curso, contexto e tipo de ação.</p></div><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Encontrar uma ideia <ArrowUpRight size={17} /></Link></aside><section className="article-sources"><h2>Fontes e cuidados editoriais</h2><p>Este guia apresenta orientações gerais. Para critérios, formulários e prazos, use sempre o roteiro da sua instituição e documentos oficiais relacionados à atividade.</p><a href="https://www.gov.br/mec" target="_blank" rel="noreferrer">Consultar informações do MEC <ArrowUpRight size={15} /></a></section></div>
       </div>
+      <FaqSection faq={guide.faq} />
       {guide.sources?.length ? (
         <section className="article-sources section-inner">
           <h2>Fontes consultadas</h2>
@@ -116,7 +152,7 @@ export function CoursePage({ slug }: { slug: string }) {
   const title = course.title || `Projeto de Extensão em ${course.name}: ideias e exemplos`;
   const description = course.description || `Veja como transformar competências de ${course.name} em uma atividade extensionista com público, local, ODS e evidências coerentes.`;
   const path = `/cursos/${course.slug}/`;
-  useSeo({ title, description, path, cluster: "cursos", schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Cursos", path: "/cursos/" }, { name: course.name, path }]), articleSchema(title, description, path, course.reviewedAt, "cursos")] } });
+  useSeo({ title, description, path, cluster: "cursos", schema: grafo(breadcrumbSchema([{ name: "Cursos", path: "/cursos/" }, { name: course.name, path }]), articleSchema(title, description, path, course.reviewedAt, "cursos"), faqSchema(course.faq)) });
   const examples = [
     { title: course.ideas[0], text: `Uma proposta direta para ${course.places[0]}, conectada a uma necessidade que você pode observar e explicar.` },
     { title: course.ideas[1], text: `Uma ação em ${course.places[1] ?? course.places[0]} que utiliza uma habilidade do curso em formato acessível ao público.` },
@@ -146,7 +182,7 @@ export function CoursePage({ slug }: { slug: string }) {
           </section>
         ) : null}
       </section>
-    ) : null}{ctaDaPagina(course.slug, "course", course.intent, course.name)}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
+    ) : null}<FaqSection faq={course.faq} />{ctaDaPagina(course.slug, "course", course.intent, course.name)}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
 }
 
 export function InstitutionPage({ slug }: { slug: string }) {
@@ -154,7 +190,7 @@ export function InstitutionPage({ slug }: { slug: string }) {
   if (!institution) return <MissingPage />;
   const title = institution.title || `Projeto de Extensão ${institution.name}: guia para atividades extensionistas`;
   const path = `/faculdades/${institution.slug}/`;
-  useSeo({ title, description: institution.description || institution.summary, path, cluster: "faculdades", schema: { "@context": "https://schema.org", "@graph": [breadcrumbSchema([{ name: "Faculdades", path: "/faculdades/" }, { name: institution.name, path }]), articleSchema(title, institution.description || institution.summary, path, institution.reviewedAt, "faculdades")] } });
+  useSeo({ title, description: institution.description || institution.summary, path, cluster: "faculdades", schema: grafo(breadcrumbSchema([{ name: "Faculdades", path: "/faculdades/" }, { name: institution.name, path }]), articleSchema(title, institution.description || institution.summary, path, institution.reviewedAt, "faculdades"), faqSchema(institution.faq)) });
   return <PageShell><article className="institution-page"><div className="institution-hero" style={{ "--institution-tone": institution.tone } as React.CSSProperties}><Breadcrumb items={[{ label: "Faculdades", href: "/faculdades/" }, { label: institution.name }]} /><span className="article-eyebrow">Guia de apoio</span><h1>Projeto de Extensão<br /><em>{institution.name}</em></h1><p>{institution.summary}</p><div className="verification-badge"><ShieldCheck size={18} /><span><strong>Última verificação:</strong> {institution.reviewedAt || "agosto de 2026"}</span></div></div><div className="institution-content section-inner"><aside className="editorial-warning"><Info size={21} /><p><strong>Antes de começar:</strong> as orientações podem variar conforme curso, disciplina e período letivo. Consulte sempre o roteiro oficial disponibilizado pela sua instituição.</p></aside>{institution.sections?.length
         ? <div className="institution-copy">
             {institution.quickAnswer && <p className="quick-answer">{institution.quickAnswer}</p>}
@@ -179,19 +215,54 @@ export function InstitutionPage({ slug }: { slug: string }) {
               </section>
             ) : null}
           </div>
-        : <div className="two-column-copy"><section><h2>Use o roteiro como ponto de controle</h2><p>O roteiro da instituição informa os campos obrigatórios, prazos, formatos e evidências esperadas. Antes de escolher uma ideia, localize o objetivo da disciplina e destaque o que precisa aparecer no relatório.</p><p>Este portal não substitui orientações acadêmicas específicas. Ele ajuda a organizar o processo de entender, planejar, realizar e documentar sua ação.</p></section><section><h2>Um caminho seguro para se organizar</h2><ol className="number-list"><li><span>1</span><p>Leia o roteiro e marque entregas, datas e critérios.</p></li><li><span>2</span><p>Defina uma ação pequena, realista e ligada ao seu curso.</p></li><li><span>3</span><p>Confirme o local e planeje como registrar a experiência.</p></li><li><span>4</span><p>Use o checklist antes de preencher o relatório final.</p></li></ol></section></div>}{ctaDaPagina(institution.slug, "institution", institution.intent)}<section className="institution-next"><div><p className="eyebrow">Organize a atividade</p><h2>Se o roteiro trouxe dúvidas, comece pelo que é possível fazer.</h2></div><div className="institution-next-actions"><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Gerar uma ideia</Link><Link href="/relatorio-final/" className="text-link">Ver guia de relatório <ArrowUpRight size={17} /></Link></div></section></div></article></PageShell>;
+        : <div className="two-column-copy"><section><h2>Use o roteiro como ponto de controle</h2><p>O roteiro da instituição informa os campos obrigatórios, prazos, formatos e evidências esperadas. Antes de escolher uma ideia, localize o objetivo da disciplina e destaque o que precisa aparecer no relatório.</p><p>Este portal não substitui orientações acadêmicas específicas. Ele ajuda a organizar o processo de entender, planejar, realizar e documentar sua ação.</p></section><section><h2>Um caminho seguro para se organizar</h2><ol className="number-list"><li><span>1</span><p>Leia o roteiro e marque entregas, datas e critérios.</p></li><li><span>2</span><p>Defina uma ação pequena, realista e ligada ao seu curso.</p></li><li><span>3</span><p>Confirme o local e planeje como registrar a experiência.</p></li><li><span>4</span><p>Use o checklist antes de preencher o relatório final.</p></li></ol></section></div>}<FaqSection faq={institution.faq} />{ctaDaPagina(institution.slug, "institution", institution.intent)}<section className="institution-next"><div><p className="eyebrow">Organize a atividade</p><h2>Se o roteiro trouxe dúvidas, comece pelo que é possível fazer.</h2></div><div className="institution-next-actions"><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Gerar uma ideia</Link><Link href="/relatorio-final/" className="text-link">Ver guia de relatório <ArrowUpRight size={17} /></Link></div></section></div></article></PageShell>;
 }
 
 export function CollectionPage({ type }: { type: "cursos" | "faculdades" | "guias" | "ferramentas" }) {
+  // As quatro páginas de coleção viviam de um parágrafo só e apareciam na auditoria como
+  // conteúdo magro. São elas que distribuem link interno para o resto do portal, então o
+  // texto abaixo existe para explicar a escolha — não para encher a página.
   const content = {
-    cursos: { title: "Projetos de extensão por curso", description: "Encontre pontos de partida que dialogam com as competências e os contextos de cada formação.", eyebrow: "Explorar por curso" },
-    faculdades: { title: "Projetos de extensão por faculdade", description: "Guias de apoio para organizar a atividade a partir do seu roteiro institucional.", eyebrow: "Explorar por faculdade" },
-    guias: { title: "Guias para projeto de extensão", description: "Conteúdos claros para entender, planejar, realizar e documentar sua atividade.", eyebrow: "Biblioteca prática" },
-    ferramentas: { title: "Ferramentas para organizar seu projeto", description: "Três formas simples de transformar dúvida em um próximo passo possível.", eyebrow: "Ferramentas gratuitas" },
+    cursos: {
+      title: "Projetos de extensão por curso",
+      description: "Hubs por curso com ideias de ação, locais possíveis, ODS coerentes e o cuidado profissional que cada formação exige na atividade extensionista.",
+      eyebrow: "Explorar por curso",
+      intro: [
+        "Cada curso chega à extensão com um repertório diferente e, principalmente, com um limite diferente. Administração corre o risco de virar consultoria para um dono; Enfermagem e Biomedicina precisam ficar na educação em saúde e fora do procedimento; Direito não pode transformar uma roda informativa em consultoria individual; Serviço Social não substitui o atendimento técnico do serviço. Os hubs abaixo tratam disso de frente, porque é aí que a maior parte dos trabalhos é devolvida.",
+        "Em cada página você encontra o recorte que funciona para aquela formação, os locais que costumam receber a ação, os ODS mais coerentes e um guia separado com ideias detalhadas — cada uma com público, entrega que fica no local e o cuidado específico. Se o seu curso não estiver na lista, comece pelo guia geral de ideias e adapte o recorte às competências que você estudou.",
+      ],
+    },
+    faculdades: {
+      title: "Projetos de extensão por faculdade",
+      description: "Guias de apoio por instituição: como ler o roteiro do ambiente virtual, organizar a logística da ação e confirmar prazos, campos e formato de entrega.",
+      eyebrow: "Explorar por faculdade",
+      intro: [
+        "Estas páginas não substituem o roteiro da sua disciplina — e nenhuma delas afirma regra de instituição sem fonte. O que elas fazem é resolver o que o roteiro não explica: como abordar um local sozinho, como montar o cronograma entre trabalho e prazo, como registrar a atividade sem colega ao lado e o que fazer quando o primeiro local recusa.",
+        "Carga horária, campos do formulário e exigência de evidência mudam por curso, por versão da matriz e por semestre. A fonte que vale é sempre o roteiro publicado no seu ambiente virtual, e o passo seguinte é o tutor pelo canal oficial. É por isso que cada página aqui indica onde confirmar, em vez de repetir um número que pode não ser o seu.",
+      ],
+    },
+    guias: {
+      title: "Guias para projeto de extensão",
+      description: "Guias práticos para entender o que é a atividade extensionista, escolher ideia e local, realizar a ação, reunir evidências e escrever o relatório final.",
+      eyebrow: "Biblioteca prática",
+      intro: [
+        "Os guias seguem a ordem em que as dúvidas aparecem: primeiro entender o que a extensão é e o que ela exige, depois escolher uma ideia possível e um local que aceite receber você, então realizar a ação e, por fim, escrever cada campo do relatório final sem inventar o que não aconteceu.",
+        "São textos de leitura objetiva, escritos para serem usados enquanto você organiza a atividade. Quando o assunto envolve exigência institucional, o guia indica que ela varia e aponta onde confirmar, em vez de afirmar uma regra que pode não valer para o seu curso.",
+      ],
+    },
+    ferramentas: {
+      title: "Ferramentas para organizar seu projeto",
+      description: "Três ferramentas gratuitas e sem cadastro: gerador de ideias por curso e contexto, seletor de ODS com justificativa e checklist do relatório final.",
+      eyebrow: "Ferramentas gratuitas",
+      intro: [
+        "As três ferramentas resolvem os três travamentos mais comuns: não saber o que fazer, não saber qual ODS escolher e não saber se o relatório está completo. Nenhuma delas pede cadastro, e o progresso do checklist fica salvo no seu próprio navegador.",
+        "Elas devolvem um ponto de partida, não um trabalho pronto. O que sai daqui precisa ser ajustado ao seu roteiro, ao local que aceitou receber a ação e ao que você de fato realizou.",
+      ],
+    },
   }[type];
   const path = `/${type}/`;
   useSeo({ title: content.title, description: content.description, path, schema: breadcrumbSchema([{ name: content.title, path }]) });
-  return <PageShell><section className="collection-page"><div className="collection-hero section-inner"><Breadcrumb items={[{ label: content.title }]} /><p className="eyebrow">{content.eyebrow}</p><h1>{content.title}</h1><p>{content.description}</p></div><div className="section-inner collection-content">{type === "cursos" && <div className="course-grid all-courses">{courses.map((course) => <CourseCard course={course} key={course.slug} />)}</div>}{type === "faculdades" && <><div className="institution-grid collection-institutions">{institutions.map((institution) => <InstitutionCard key={institution.slug} {...institution} />)}</div><p className="editorial-note">As páginas de faculdade apresentam orientação geral. Regras, campos e prazos devem ser confirmados no roteiro oficial da sua instituição.</p></>}{type === "guias" && <div className="guide-grid all-guides">{guides.map((guide) => <GuideCard guide={guide} key={guide.slug} />)}</div>}{type === "ferramentas" && <div className="tool-collection"><ToolCard href="/ferramentas/gerador-de-ideias/" icon="ideas" title="Gerador de ideias" description="Combine curso, local, público e complexidade para explorar propostas." /><ToolCard href="/ferramentas/seletor-de-ods/" icon="ods" title="Seletor de ODS" description="Encontre objetivos compatíveis e uma explicação para a relação." /><ToolCard href="/ferramentas/checklist-relatorio/" icon="check" title="Checklist do relatório" description="Salve seu andamento no próprio dispositivo, sem criar conta." /></div>}</div></section></PageShell>;
+  return <PageShell><section className="collection-page"><div className="collection-hero section-inner"><Breadcrumb items={[{ label: content.title }]} /><p className="eyebrow">{content.eyebrow}</p><h1>{content.title}</h1><p>{content.description}</p>{content.intro.map((paragrafo) => <p key={paragrafo} className="collection-intro">{paragrafo}</p>)}</div><div className="section-inner collection-content">{type === "cursos" && <div className="course-grid all-courses">{courses.map((course) => <CourseCard course={course} key={course.slug} />)}</div>}{type === "faculdades" && <><div className="institution-grid collection-institutions">{institutions.map((institution) => <InstitutionCard key={institution.slug} {...institution} />)}</div><p className="editorial-note">As páginas de faculdade apresentam orientação geral. Regras, campos e prazos devem ser confirmados no roteiro oficial da sua instituição.</p></>}{type === "guias" && <div className="guide-grid all-guides">{guides.map((guide) => <GuideCard guide={guide} key={guide.slug} />)}</div>}{type === "ferramentas" && <div className="tool-collection"><ToolCard href="/ferramentas/gerador-de-ideias/" icon="ideas" title="Gerador de ideias" description="Combine curso, local, público e complexidade para explorar propostas." /><ToolCard href="/ferramentas/seletor-de-ods/" icon="ods" title="Seletor de ODS" description="Encontre objetivos compatíveis e uma explicação para a relação." /><ToolCard href="/ferramentas/checklist-relatorio/" icon="check" title="Checklist do relatório" description="Salve seu andamento no próprio dispositivo, sem criar conta." /></div>}</div></section></PageShell>;
 }
 
 export function StaticPage({ page }: { page: "sobre" | "autoria" | "privacidade" | "termos" }) {

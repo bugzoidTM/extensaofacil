@@ -11,6 +11,11 @@ export function openDb() {
   const db = new Database(DB_PATH);
   db.pragma("foreign_keys = ON");
   db.exec(fs.readFileSync(path.join(CMS_DIR, "schema.sql"), "utf-8"));
+  // `CREATE TABLE IF NOT EXISTS` não acrescenta coluna em tabela que já existe, então
+  // a migração precisa vir aqui — e no openDb, não no server, para o export e o import
+  // também enxergarem a coluna quando rodam sozinhos.
+  try { db.prepare("SELECT faq FROM pages LIMIT 1").get(); }
+  catch { db.exec("ALTER TABLE pages ADD COLUMN faq TEXT NOT NULL DEFAULT '[]'"); }
   return db;
 }
 
@@ -20,7 +25,7 @@ const j = (v: string) => JSON.parse(v);
 
 export type PageRow = {
   slug: string; kind: string; title: string; description: string; eyebrow: string | null;
-  quick_answer: string | null; intent: string; tags: string; related: string; extra: string;
+  quick_answer: string | null; intent: string; tags: string; related: string; extra: string; faq: string;
   author_slug: string | null; published: number; reviewed_at: string | null;
   created_at: string; updated_at: string;
 };
@@ -32,7 +37,7 @@ export function getPage(db: Db, slug: string) {
   return {
     slug: row.slug, kind: row.kind, title: row.title, description: row.description,
     eyebrow: row.eyebrow ?? "", quickAnswer: row.quick_answer ?? "", intent: row.intent,
-    tags: j(row.tags), related: j(row.related), extra: j(row.extra),
+    tags: j(row.tags), related: j(row.related), extra: j(row.extra), faq: j(row.faq ?? "[]"),
     author: row.author_slug, published: !!row.published, reviewedAt: row.reviewed_at,
     createdAt: row.created_at, updatedAt: row.updated_at,
     sections: (db.prepare("SELECT title, paragraphs, bullets FROM sections WHERE page_slug = ? ORDER BY position").all(slug) as any[])
@@ -53,6 +58,9 @@ export function savePage(db: Db, input: any) {
   // tone da faculdade — a página passou a renderizar "Projeto de Extensão undefined".
   // Campo ausente ou objeto vazio preserva o que já está gravado.
   const extra = input.extra && Object.keys(input.extra).length ? input.extra : (atual?.extra ?? {});
+  // Mesma armadilha do `extra`: o painel antigo não conhece `faq` e mandaria a página
+  // inteira sem o campo. Ausente preserva o que está gravado; `[]` explícito apaga.
+  const faq = input.faq === undefined ? (atual?.faq ?? []) : input.faq;
   const values = {
     slug: input.slug,
     kind: input.kind ?? "guide",
@@ -64,6 +72,7 @@ export function savePage(db: Db, input: any) {
     tags: JSON.stringify(input.tags ?? []),
     related: JSON.stringify(input.related ?? []),
     extra: JSON.stringify(extra),
+    faq: JSON.stringify(faq),
     author_slug: input.author ?? null,
     published: input.published === false ? 0 : 1,
     reviewed_at: input.reviewedAt ?? null,
@@ -73,14 +82,14 @@ export function savePage(db: Db, input: any) {
   const tx = db.transaction(() => {
     if (exists) {
       db.prepare(`UPDATE pages SET kind=@kind, title=@title, description=@description, eyebrow=@eyebrow,
-        quick_answer=@quick_answer, intent=@intent, tags=@tags, related=@related, extra=@extra,
+        quick_answer=@quick_answer, intent=@intent, tags=@tags, related=@related, extra=@extra, faq=@faq,
         author_slug=@author_slug, published=@published, reviewed_at=@reviewed_at, updated_at=@updated_at
         WHERE slug=@slug`).run(values);
     } else {
       db.prepare(`INSERT INTO pages (slug, kind, title, description, eyebrow, quick_answer, intent, tags,
-        related, extra, author_slug, published, reviewed_at, updated_at)
+        related, extra, faq, author_slug, published, reviewed_at, updated_at)
         VALUES (@slug, @kind, @title, @description, @eyebrow, @quick_answer, @intent, @tags,
-        @related, @extra, @author_slug, @published, @reviewed_at, @updated_at)`).run(values);
+        @related, @extra, @faq, @author_slug, @published, @reviewed_at, @updated_at)`).run(values);
     }
     if (input.sections) {
       db.prepare("DELETE FROM sections WHERE page_slug = ?").run(input.slug);
