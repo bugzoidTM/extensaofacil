@@ -42,6 +42,37 @@ curl -X POST https://extensaofacil.com.br/admin/api/publish \
   -d '{"slugs":["relatorio-final/durante-a-acao"]}'
 ```
 
+## Perguntas frequentes (FAQ)
+
+Cada página tem um campo `faq` — uma lista de pergunta e resposta. Ele sai em dois
+lugares ao mesmo tempo, **do mesmo dado**:
+
+- o bloco visível "Perguntas frequentes" no fim da página;
+- um `FAQPage` no JSON-LD, que é o que o Google e os motores de resposta leem.
+
+Os dois nascem do mesmo campo de propósito: marcar `FAQPage` sobre texto que o leitor
+não vê é o caso que o Google trata como marcação enganosa. No painel, o editor fica logo
+acima de "Fontes consultadas".
+
+Escreva a pergunta como a pessoa digitaria na busca e a resposta em duas ou três frases
+que se sustentem sozinhas, sem depender do resto da página — é assim que ela vira citação.
+
+## Carga em lote (dez páginas de uma vez)
+
+Escrever página longa pelo formulário é inviável. Para lote, use a API:
+
+```bash
+node cms/carga.mjs ./pasta-com-json            # grava e publica
+node cms/carga.mjs ./pasta-com-json --dry      # só diz o que faria
+```
+
+Um `.json` por página, no mesmo formato que `GET /api/pages/detail` devolve.
+
+**Armadilha que o script resolve:** `savePage` zera o que não vem no corpo. Um PUT
+"parcial" só com a FAQ apagaria título, descrição e intenção da página. Um arquivo com
+`"_merge": true` é tratado como remendo — o script lê a página inteira pela API, funde os
+campos do arquivo e devolve tudo.
+
 ## Quando ainda é preciso build
 
 Só quando o **código** muda (componentes, CSS, rotas do App): `/root/extensaofacil/deploy.sh`.
