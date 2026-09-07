@@ -2,9 +2,13 @@
  * CTA contextual para o Apostileiros (PRD §30 a §33).
  *
  * Aparece só depois que o conteúdo entregou a resposta — nunca no hero, nunca em
- * modal, nunca fixo na tela. O link sai com `rel="sponsored"` porque é comercial e
- * entre sites do mesmo dono: sem isso, os dois domínios ficam expostos a serem
- * lidos como esquema de links.
+ * modal, nunca fixo na tela.
+ *
+ * Sobre o `rel` (decisão do dono em 07/09/2026): o portal existe para dar visibilidade
+ * ao Apostileiros. O `rel="sponsored"` que estava aqui instrui o Google a NÃO passar
+ * ranking — anulava o propósito. `sponsored` é para anúncio pago; link editorial entre
+ * dois sites do mesmo dono, com a parceria declarada no texto (eyebrow "Parceria" e
+ * "loja parceira" na descrição), é link normal. A divulgação fica no texto, não no rel.
  */
 import { ArrowUpRight } from "lucide-react";
 import { comUtm } from "@/data/commercial";
@@ -29,7 +33,7 @@ export function CommercialHelpCTA({ title, description, href, campaign, content,
       <a
         href={destino}
         target="_blank"
-        rel="sponsored noopener noreferrer"
+        rel="noopener"
         onClick={() => track("apostileiros_referral_click", { campaign, content, destino: href })}
       >
         {label} <ArrowUpRight size={17} />

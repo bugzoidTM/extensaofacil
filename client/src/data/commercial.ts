@@ -45,8 +45,13 @@ export const destinoPorSlug: Record<string, Destino> = {
       "e adapte o texto à ação que você realmente realizou.",
     label: "Ver o catálogo de projetos de extensão",
   },
+  // Unopar, Anhanguera e Uniderp apontavam para /produto-tag/<marca>/. Trocado em
+  // 07/09/2026: as marcas são do mesmo grupo e os produtos são os mesmos (sobreposição
+  // medida de 95-99%), as tags são arquivos finos que a loja está tirando do índice, e
+  // a categoria é a única URL eleita para receber autoridade. O texto segue nomeando a
+  // instituição, porque é isso que o leitor procurou.
   anhanguera: {
-    href: `${APOSTILEIROS}/produto-tag/anhanguera/`,
+    href: `${APOSTILEIROS}/categoria-produto/projeto-de-extensao/`,
     titulo: "Procurando material específico da Anhanguera?",
     descricao:
       "O Apostileiros, loja parceira, reúne projetos de extensão e portfólios organizados " +
@@ -54,7 +59,7 @@ export const destinoPorSlug: Record<string, Destino> = {
     label: "Ver material da Anhanguera",
   },
   unopar: {
-    href: `${APOSTILEIROS}/produto-tag/unopar/`,
+    href: `${APOSTILEIROS}/categoria-produto/projeto-de-extensao/`,
     titulo: "Procurando material específico da Unopar?",
     descricao:
       "O Apostileiros, loja parceira, reúne projetos de extensão e portfólios organizados " +
@@ -65,7 +70,7 @@ export const destinoPorSlug: Record<string, Destino> = {
   // mandar o leitor para uma vitrine de um item é pior que mandar para o catálogo inteiro.
   // Por isso Pitágoras continua caindo no destino de cluster, e só Uniderp ganhou tag própria.
   uniderp: {
-    href: `${APOSTILEIROS}/produto-tag/uniderp/`,
+    href: `${APOSTILEIROS}/categoria-produto/projeto-de-extensao/`,
     titulo: "Procurando material específico da Uniderp?",
     descricao:
       "O Apostileiros, loja parceira, reúne projetos de extensão e portfólios organizados " +
