@@ -86,6 +86,13 @@ fica versionado mesmo com o banco fora do repositório. Se o `content.db` for pe
 npx tsx cms/import.ts     # reconstrói o banco a partir do snapshot do repo
 ```
 
+## Silo por curso e a divisão com o Apostileiros
+
+Ver `docs/DIVISAO-COM-APOSTILEIROS.md`. Resumo: `/cursos/<curso>/<tema>/` é rota
+genérica; `ideias`, `exemplo`, `etapas` e `relatorio-final` formam o silo de cada curso,
+ligados pelo `CourseSiloNav`, e toda página do silo mostra o CTA para a categoria do
+curso na loja. Os guias novos nascem como rascunho e o redator do n8n os escreve.
+
 ## Rotas sem conteúdo
 
 O App tem rota para `/cursos/<curso>/ideias/` de todo curso, mas só alguns têm o conteúdo

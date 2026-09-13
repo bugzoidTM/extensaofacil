@@ -31,7 +31,10 @@ function Router() {
     <Route path="/ferramentas/checklist-relatorio/" component={ChecklistToolPage} />
     <Route path="/relatorio-final/:section/">{(params) => <ArticlePage slug={`relatorio-final/${params.section}`} />}</Route>
     <Route path="/cursos/" component={() => <CollectionPage type="cursos" />} />
-    <Route path="/cursos/:course/ideias/">{(params) => <ArticlePage slug={`cursos/${params.course}/ideias`} />}</Route>
+    {/* Silo por curso (2026-09-13): hub + guias de cauda longa com o mesmo prefixo
+        (ideias, exemplo, etapas, relatorio-final...). A rota é genérica: página nova
+        no CMS com slug `cursos/<curso>/<tema>` passa a existir sem mexer no código. */}
+    <Route path="/cursos/:course/:topic/">{(params) => <ArticlePage slug={`cursos/${params.course}/${params.topic}`} />}</Route>
     <Route path="/cursos/:slug/">{(params) => <CoursePage slug={params.slug} />}</Route>
     <Route path="/faculdades/" component={() => <CollectionPage type="faculdades" />} />
     <Route path="/faculdades/:slug/">{(params) => <InstitutionPage slug={params.slug} />}</Route>

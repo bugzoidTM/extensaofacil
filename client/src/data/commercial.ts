@@ -140,8 +140,10 @@ export const destinoPorCluster: Record<string, Destino> = {
 /** Resolve o destino de uma página: específico primeiro, curso depois, cluster por último. */
 export function destinoDaPagina(slug: string, kind: string, nomeCurso?: string): Destino | null {
   if (destinoPorSlug[slug]) return destinoPorSlug[slug];
-  if (kind === "course") {
-    const porCurso = destinoDeCurso(slug, nomeCurso ?? "");
+  // Hub do curso e guias do silo (`cursos/<curso>/...`) vão para a categoria do curso.
+  const curso = kind === "course" ? slug : cursoDoSlug(slug);
+  if (curso) {
+    const porCurso = destinoDeCurso(curso, nomeCurso ?? "");
     if (porCurso) return porCurso;
   }
   return destinoPorCluster[clusterDe(slug, kind)] ?? null;
@@ -174,11 +176,23 @@ const SEM_CTA = new Set([
 ]);
 
 export function podeMostrarCta(slug: string, intent?: string) {
-  return intent === "commercial-assist" && !SEM_CTA.has(slug);
+  if (SEM_CTA.has(slug)) return false;
+  // Decisão do dono (13/09/2026): o portal disputa a cauda longa informacional POR
+  // CURSO e manda o leitor qualificado para a categoria do curso na loja. Quem chegou
+  // em "temas para projeto de extensão em Pedagogia" já é esse leitor — o silo do
+  // curso mostra o CTA independentemente da intenção marcada na página.
+  if (cursoDoSlug(slug)) return true;
+  return intent === "commercial-assist";
+}
+
+/** Slug do curso quando a página pertence ao silo `cursos/<curso>/...`; senão null. */
+export function cursoDoSlug(slug: string): string | null {
+  const m = slug.match(/^cursos\/([a-z0-9-]+)\//);
+  return m ? m[1] : null;
 }
 
 export function clusterDe(slug: string, kind: string) {
-  if (kind === "course") return "cursos";
+  if (kind === "course" || cursoDoSlug(slug)) return "cursos";
   if (kind === "institution") return "faculdades";
   if (slug.startsWith("relatorio-final")) return "relatorio-final";
   return "guias";

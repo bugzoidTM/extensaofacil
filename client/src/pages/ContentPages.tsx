@@ -9,7 +9,7 @@ import { AnswerBox, Breadcrumb, MetaLine, PageShell, SectionHeading } from "@/co
 import { courses, findRelated, getCourse, getGuide, getInstitution, guides, institutions, SITE_NAME, SITE_URL, type FaqItem } from "@/data/portalData";
 import { track, observarProfundidade } from "@/lib/analytics";
 import { CommercialHelpCTA } from "@/components/CommercialHelpCTA";
-import { clusterDe, destinoDaPagina, podeMostrarCta } from "@/data/commercial";
+import { clusterDe, cursoDoSlug, destinoDaPagina, podeMostrarCta } from "@/data/commercial";
 import { cartaoDe, useSeo } from "@/lib/seo";
 
 function breadcrumbSchema(items: { name: string; path: string }[]) {
@@ -107,18 +107,50 @@ function ctaDaPagina(slug: string, kind: string, intent?: string, nomeCurso?: st
   />;
 }
 
+/** Rótulo curto de cada guia do silo, pelo último trecho do slug. */
+const ROTULO_SILO: Record<string, string> = {
+  ideias: "Temas e ideias", exemplo: "Exemplo comentado", etapas: "Etapas I, II e III", "relatorio-final": "Relatório final",
+};
+
+/**
+ * Navegação do silo por curso (2026-09-13): hub + guias `cursos/<curso>/...` publicados.
+ * É o que liga a cauda longa ao hub e o hub à cauda longa — sem isso cada página nova
+ * nasceria órfã, e o Google não entende silo por URL, entende por link.
+ */
+function CourseSiloNav({ cursoSlug, atual }: { cursoSlug: string; atual: string }) {
+  const course = getCourse(cursoSlug);
+  if (!course) return null;
+  const prefixo = `cursos/${cursoSlug}/`;
+  const irmaos = guides.filter((g) => g.slug.startsWith(prefixo));
+  if (!irmaos.length) return null;
+  const itens = [{ slug: cursoSlug, href: `/cursos/${cursoSlug}/`, label: "Visão geral" },
+    ...irmaos.map((g) => ({ slug: g.slug, href: `/${g.slug}/`, label: ROTULO_SILO[g.slug.slice(prefixo.length)] ?? g.eyebrow ?? g.title }))];
+  return <nav className="course-silo" aria-label={`Projeto de extensão em ${course.name}`}>
+    <span>Projeto de extensão em {course.name}</span>
+    {itens.map((item) => item.slug === atual
+      ? <em key={item.slug} aria-current="page">{item.label}</em>
+      : <Link key={item.slug} href={item.href}>{item.label}</Link>)}
+  </nav>;
+}
+
 export function ArticlePage({ slug }: { slug: string }) {
   const guide = getGuide(slug);
   if (!guide) return <MissingPage />;
   const path = `/${guide.slug}/`;
   const cluster = clusterDe(guide.slug, "guide");
-  const schema = grafo(breadcrumbSchema([{ name: guide.title, path }]), articleSchema(guide.title, guide.description, path, guide.updated, cluster), faqSchema(guide.faq));
+  // Guia do silo de curso: trilha Cursos > Curso > guia, e o CTA sabe o nome do curso.
+  const cursoSlug = cursoDoSlug(guide.slug);
+  const curso = cursoSlug ? getCourse(cursoSlug) : undefined;
+  const trilha = curso
+    ? [{ name: "Cursos", path: "/cursos/" }, { name: curso.name, path: `/cursos/${curso.slug}/` }, { name: guide.title, path }]
+    : [{ name: guide.title, path }];
+  const schema = grafo(breadcrumbSchema(trilha), articleSchema(guide.title, guide.description, path, guide.updated, cluster), faqSchema(guide.faq));
   useSeo({ title: guide.title, description: guide.description, path, type: "article", schema, cluster });
   useEffect(() => observarProfundidade(guide.slug), [guide.slug]);
   const related = findRelated(guide.related);
   return <PageShell>
     <article className="article-page" onLoad={() => track("article_view", { slug: guide.slug })}>
-      <div className="article-top"><Breadcrumb items={[{ label: guide.eyebrow, href: "/guias/" }, { label: guide.title }]} /><span className="article-eyebrow">{guide.eyebrow}</span><h1>{guide.title}</h1><p className="article-deck">{guide.description}</p><MetaLine updated={guide.updated} category={guide.tags[0]} /><div className="article-route-strip" aria-label="Percurso de leitura"><span>Orientação</span><i /><span>Planejamento</span><i /><span>Registro</span></div></div>
+      <div className="article-top"><Breadcrumb items={curso ? [{ label: "Cursos", href: "/cursos/" }, { label: curso.name, href: `/cursos/${curso.slug}/` }, { label: guide.title }] : [{ label: guide.eyebrow, href: "/guias/" }, { label: guide.title }]} />{cursoSlug ? <CourseSiloNav cursoSlug={cursoSlug} atual={guide.slug} /> : null}<span className="article-eyebrow">{guide.eyebrow}</span><h1>{guide.title}</h1><p className="article-deck">{guide.description}</p><MetaLine updated={guide.updated} category={guide.tags[0]} /><div className="article-route-strip" aria-label="Percurso de leitura"><span>Orientação</span><i /><span>Planejamento</span><i /><span>Registro</span></div></div>
       <div className="article-layout">
         <aside className="toc"><p>Neste guia</p>{guide.sections.map((section, index) => <a key={section.title} href={`#secao-${index + 1}`}>{String(index + 1).padStart(2, "0")} {section.title}</a>)}<div className="toc-note"><Clock3 size={16} />Leitura objetiva, para você colocar em prática.</div></aside>
         <div className="article-body"><AnswerBox><p>{guide.quickAnswer}</p></AnswerBox>{guide.sections.map((section, index) => <section id={`secao-${index + 1}`} key={section.title} className="article-section"><h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{section.bullets && <ul className="check-list">{section.bullets.map((item) => <li key={item}><Check size={18} />{item}</li>)}</ul>}</section>)}<aside className="contextual-cta"><div><span>Próximo passo</span><h3>Quer transformar isso em uma proposta possível?</h3><p>Use o gerador para combinar curso, contexto e tipo de ação.</p></div><Link href="/ferramentas/gerador-de-ideias/" className="button button-primary">Encontrar uma ideia <ArrowUpRight size={17} /></Link></aside><section className="article-sources"><h2>Fontes e cuidados editoriais</h2><p>Este guia apresenta orientações gerais. Para critérios, formulários e prazos, use sempre o roteiro da sua instituição e documentos oficiais relacionados à atividade.</p><a href="https://www.gov.br/mec" target="_blank" rel="noreferrer">Consultar informações do MEC <ArrowUpRight size={15} /></a></section></div>
@@ -138,7 +170,7 @@ export function ArticlePage({ slug }: { slug: string }) {
           </ul>
         </section>
       ) : null}
-      {ctaDaPagina(guide.slug, "guide", guide.intent)}
+      {ctaDaPagina(guide.slug, "guide", guide.intent, curso?.name)}
       <section className="article-related"><SectionHeading eyebrow="Continue por aqui" title="Conteúdos relacionados" /><div className="guide-grid">{related.map((relatedGuide) => <GuideCard guide={relatedGuide} key={relatedGuide.slug} />)}</div></section>
     </article>
   </PageShell>;
@@ -182,7 +214,7 @@ export function CoursePage({ slug }: { slug: string }) {
           </section>
         ) : null}
       </section>
-    ) : null}<FaqSection faq={course.faq} />{ctaDaPagina(course.slug, "course", course.intent, course.name)}<section className="hub-section section-inner"><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
+    ) : null}<FaqSection faq={course.faq} />{ctaDaPagina(course.slug, "course", course.intent, course.name)}<section className="hub-section section-inner"><CourseSiloNav cursoSlug={course.slug} atual={course.slug} /><SectionHeading eyebrow="Aprofunde" title="Conteúdos para seu percurso" /><div className="guide-grid">{findRelated(["ideias-projeto-de-extensao", "onde-realizar", "evidencias"]).map((guide) => <GuideCard key={guide.slug} guide={guide} />)}</div></section></article></PageShell>;
 }
 
 export function InstitutionPage({ slug }: { slug: string }) {

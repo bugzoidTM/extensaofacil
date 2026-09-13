@@ -225,7 +225,12 @@ app.post("/api/publish", requireAuth, async (req, res) => {
     // hubs que listam o conteúdo alterado também precisam ser regravados
     const hubs = new Set<string>(["/", "/buscar/"]);
     for (const r of routes) {
-      if (r.startsWith("/cursos/")) hubs.add("/cursos/");
+      if (r.startsWith("/cursos/")) {
+        hubs.add("/cursos/");
+        // guia do silo (`/cursos/<curso>/<tema>/`): o hub do curso lista os irmãos
+        const m = r.match(/^\/cursos\/([^/]+)\/[^/]+\/$/);
+        if (m) hubs.add(`/cursos/${m[1]}/`);
+      }
       else if (r.startsWith("/faculdades/")) hubs.add("/faculdades/");
       else hubs.add("/guias/");
     }

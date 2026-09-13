@@ -240,6 +240,12 @@ picture { display: contents; }
 .article-route-strip { display: flex; align-items: center; gap: 9px; margin-top: 27px; color: var(--route); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .article-route-strip i { display: block; flex: 0 0 25px; height: 2px; border-top: 2px dotted var(--route); }
 .article-route-strip span:first-child::before { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--sun); content: ""; }
+.course-silo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 18px 0 22px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; }
+.course-silo > span { margin-right: 6px; color: var(--route); font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.course-silo > a { color: #57706b; text-decoration: none; }
+.course-silo > a:hover { color: var(--coral-deep); text-decoration: underline; }
+.course-silo > em { font-style: normal; font-weight: 700; color: var(--coral-deep); }
+.hub-section .course-silo { margin: 0 0 34px; }
 .article-layout { display: grid; grid-template-columns: 205px minmax(0,710px); align-items: start; gap: 65px; width: min(1010px, calc(100% - 48px)); margin: 0 auto; }
 .toc { position: sticky; top: 105px; display: flex; flex-direction: column; gap: 9px; padding: 18px 16px 20px; border-left: 2px solid var(--sun); background: rgba(255,254,249,.6); }
 .toc > p { margin: 0 0 5px; color: var(--route); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }

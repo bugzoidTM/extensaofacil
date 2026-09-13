@@ -8,32 +8,9 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -460,
+        -464,
         0
       ]
-    },
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "hours",
-              "hoursInterval": 6
-            }
-          ]
-        }
-      },
-      "id": "89032bfd-38fb-4282-aad3-e6940236b9cd",
-      "name": "A cada 6 horas",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        -460,
-        180
-      ],
-      "disabled": true,
-      "notes": "Ligue quando confiar no fluxo. Cada disparo escreve UMA página da fila.",
-      "notesInFlow": true
     },
     {
       "parameters": {
@@ -105,16 +82,12 @@
         -240,
         80
       ],
-      "notes": "alvo vazio = pega a próxima da fila de prioridade. Preencha com um slug para forçar uma página.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "alvo vazio = pega a próxima da fila de prioridade. Preencha com um slug para forçar uma página."
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "https://extensaofacil.com.br/admin/api/pages",
-        "options": {
-          "timeout": 60000
-        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -123,6 +96,9 @@
               "value": "=Bearer {{ $('Configuração').first().json.cmsToken }}"
             }
           ]
+        },
+        "options": {
+          "timeout": 60000
         }
       },
       "id": "764658d6-6e5a-48e5-a3bc-f48c0b7f5706",
@@ -130,15 +106,14 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -20,
+        -16,
         80
       ],
-      "notes": "Estado atual do CMS: o que existe e quantas palavras tem.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "Estado atual do CMS: o que existe e quantas palavras tem."
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "https://extensaofacil.com.br/content/portal-data.json",
         "options": {
           "timeout": 60000
@@ -149,34 +124,31 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        200,
+        208,
         80
       ],
-      "notes": "Texto já publicado, usado para não repetir parágrafo.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "Texto já publicado, usado para não repetir parágrafo."
     },
     {
       "parameters": {
-        "jsCode": "\n// Escolhe a próxima página a escrever e monta o prompt.\n// Ordem de prioridade: o PRD manda terminar as páginas-pilar antes de produzir em massa\n// (§90), então respeitamos essa fila em vez de varrer o site inteiro.\n\nconst cfg = $('Configuração').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\nconst publicado = $('Conteúdo publicado').first().json;\n\nconst PRIORIDADE = [\n  'projeto-de-extensao', 'relatorio-final', 'anhanguera', 'unopar',\n  'relatorio-final/como-preencher', 'relatorio-final/durante-a-acao',\n  'relatorio-final/resultado-da-acao', 'relatorio-final/conclusao',\n  'relatorio-final/percepcao', 'relatorio-final/depoimento-instituicao',\n  'relatorio-final/evidencias',\n  'como-fazer-projeto-de-extensao', 'ideias-projeto-de-extensao',\n  'ods', 'onde-realizar', 'evidencias',\n  'pedagogia', 'enfermagem', 'administracao', 'analise-e-desenvolvimento-de-sistemas', 'direito',\n];\n\n// Termo que cada página P0 precisa disputar. Sem fixar isso, o modelo reescreve o\n// título com um sinônimo e a página perde a consulta principal (aconteceu com\n// /relatorio-final/, que virou \"relatório final de extensão\").\nconst PALAVRA_CHAVE = {\n  'projeto-de-extensao': 'projeto de extensão',\n  'relatorio-final': 'relatório final de atividades extensionistas',\n  'relatorio-final/como-preencher': 'como preencher o relatório final de extensão',\n  'relatorio-final/durante-a-acao': 'durante a ação projeto de extensão',\n  'relatorio-final/resultado-da-acao': 'resultado da ação projeto de extensão',\n  'relatorio-final/conclusao': 'conclusão do projeto de extensão',\n  'relatorio-final/percepcao': 'percepção das atividades extensionistas',\n  'relatorio-final/depoimento-instituicao': 'depoimento da instituição projeto de extensão',\n  'relatorio-final/evidencias': 'evidências no relatório final de extensão',\n  'como-fazer-projeto-de-extensao': 'como fazer projeto de extensão',\n  'ideias-projeto-de-extensao': 'ideias para projeto de extensão',\n  'ods': 'ODS no projeto de extensão',\n  'onde-realizar': 'onde realizar projeto de extensão',\n  'evidencias': 'evidências do projeto de extensão',\n  'anhanguera': 'projeto de extensão Anhanguera',\n  'unopar': 'projeto de extensão Unopar',\n};\n\nconst porSlug = Object.fromEntries(paginas.map(p => [p.slug, p]));\nlet alvo = null;\n\nif (cfg.alvo) {\n  alvo = porSlug[cfg.alvo];\n  if (!alvo) throw new Error(`A página \"${cfg.alvo}\" não existe no CMS. Crie-a primeiro no painel.`);\n} else {\n  for (const slug of PRIORIDADE) {\n    const p = porSlug[slug];\n    if (p && p.words < cfg.minPalavras) { alvo = p; break; }\n  }\n}\nif (!alvo) {\n  // A fila de prioridade acabou — as páginas-pilar já passaram do mínimo. Mas o site\n  // ainda tem stubs no ar (os ~160 palavras de /como-tirar-fotos.../ e das páginas de\n  // ideias por curso), que a lista PRIORIDADE nunca cita. Em vez de parar de produzir,\n  // caímos para a fila geral: qualquer página abaixo do mínimo, da mais curta primeiro.\n  const restantes = paginas\n    .filter(p => p.words < cfg.minPalavras)\n    .sort((a, b) => a.words - b.words || a.slug.localeCompare(b.slug));\n  alvo = restantes[0] || null;\n}\nif (!alvo) return [{ json: { nada: true, motivo: 'Todas as páginas do site já passaram do mínimo de palavras.' } }];\n\n// Estrutura pedida pelo PRD, por tipo de página.\nconst ROTEIRO = {\n  guide: ['O que é / resposta direta', 'Para que serve', 'Como funciona na prática',\n          'Como escolher (problema, público, local)', 'Passo a passo', 'Exemplo completo identificado como exemplo',\n          'Erros comuns', 'Como isso aparece no relatório final', 'Próximos passos'],\n  course: ['Como funciona um projeto de extensão neste curso', 'Competências do curso que podem ser aplicadas',\n           'Problemas que o curso consegue enfrentar', 'Locais adequados', 'Públicos possíveis',\n           'ODS relacionados e por quê', 'Exemplos de atividades', 'Materiais necessários',\n           'Evidências que fazem sentido', 'O que muda no relatório final', 'Erros comuns'],\n  institution: ['Como funcionam as atividades extensionistas nesta instituição',\n                'Como interpretar o roteiro da disciplina', 'Estrutura normalmente solicitada',\n                'ODS', 'Comunidade externa e local da atividade', 'Execução',\n                'Relatório final', 'Evidências', 'Principais dúvidas', 'Erros recorrentes'],\n};\n\n// Para as páginas de faculdade, mandamos o texto da OUTRA faculdade junto com a ordem\n// explícita de não repetir — é o problema nomeado no §22 do PRD.\nlet contraste = '';\nif (alvo.kind === 'institution') {\n  const outras = (publicado.guides || []).length ? [] : [];\n  const irmas = paginas.filter(p => p.kind === 'institution' && p.slug !== alvo.slug).map(p => p.slug);\n  contraste = `\\nEstas outras páginas de faculdade já existem: ${irmas.join(', ')}. `\n    + `NÃO reaproveite parágrafos, exemplos ou justificativas delas. O conteúdo textual precisa ser próprio desta instituição.`;\n}\n\nconst guiaAtual = (publicado.guides || []).find(g => g.slug === alvo.slug);\nconst conteudoAtual = guiaAtual\n  ? `\\n\\nCONTEÚDO ATUAL DESTA PÁGINA (amplie e aprofunde, não jogue fora o que está bom):\\n`\n    + `Resposta rápida: ${guiaAtual.quickAnswer}\\n`\n    + (guiaAtual.sections || []).map(s => `## ${s.title}\\n${(s.paragraphs || []).join('\\n')}`).join('\\n')\n  : '';\n\nconst slugsDisponiveis = paginas.map(p => `${p.slug} (${p.title})`).join('\\n');\n\nconst system = [\n  'Você é redator do Extensão Fácil, um portal brasileiro que orienta estudantes de graduação a planejar,',\n  'executar e documentar atividades de extensão universitária.',\n  '',\n  'REGRAS EDITORIAIS OBRIGATÓRIAS:',\n  '1. Português do Brasil, tom editorial e direto. Nada de linguagem publicitária ou promessa de resultado fácil.',\n  '2. NUNCA afirme regra institucional específica (prazo, quantidade de horas, campo obrigatório, nota) como se fosse',\n  '   fato verificado. Quando o assunto for exigência de faculdade, diga que varia por curso, matriz e período letivo,',\n  '   e oriente a consultar o roteiro oficial no ambiente acadêmico do aluno.',\n  '3. Exemplos são bem-vindos, mas todo exemplo deve estar explicitamente identificado como exemplo fictício.',\n  '   Jamais apresente um exemplo como atividade real já realizada.',\n  '4. Não invente estatística, pesquisa, número ou citação. Se não tem fonte, não afirme.',\n  '5. Não escreva texto genérico que serviria para qualquer página. Cada seção precisa ser específica ao tema.',\n  '6. Não copie estrutura de frase nem parágrafos de outras páginas do portal.',\n  '7. Nada de CTA comercial no meio do conteúdo.',\n  '8. O leitor típico cumpre uma DISCIPLINA de extensão e recebe um roteiro no ambiente acadêmico.',\n  '   Não presuma edital, bolsa, orientador designado ou submissão a comitê — isso é outro contexto.',\n  '',\n  'FORMATO DA RESPOSTA: apenas um objeto JSON válido, sem markdown, sem crase, sem comentário antes ou depois.',\n].join('\\n');\n\nconst chave = PALAVRA_CHAVE[alvo.slug] || '';\n\nconst user = [\n  `Escreva o conteúdo completo da página \"${alvo.title || alvo.slug}\" (${alvo.route}).`,\n  `Tipo: ${alvo.kind}. Intenção de busca: ${alvo.intent}.`,\n  chave ? `PALAVRA-CHAVE PRINCIPAL: \"${chave}\". Todas essas palavras precisam aparecer no \"title\" e na \"quickAnswer\" — não troque por sinônimo. Pode intercalar outras palavras para o título ficar natural: \"Durante a ação: o que escrever no projeto de extensão\" é melhor que grudar a expressão inteira no começo.` : '',\n  'O \"title\" segue o padrão do português: maiúscula só na primeira palavra e em nomes próprios. Depois de dois-pontos, continue em MINÚSCULA. NÃO escreva Em Caixa Alta Cada Palavra.',\n  '',\n  `Mínimo de ${cfg.minPalavras} palavras no total, distribuídas nas seções.`,\n  `Escreva pelo menos ${cfg.minSecoes} seções, seguindo este roteiro (adapte os títulos, não copie literalmente):`,\n  (ROTEIRO[alvo.kind] || ROTEIRO.guide).map((s, i) => `  ${i + 1}. ${s}`).join('\\n'),\n  contraste,\n  '',\n  'Escolha de 3 a 4 slugs desta lista para o campo \"related\" (só slugs que existem aqui):',\n  slugsDisponiveis,\n  conteudoAtual,\n  '',\n  'Responda com este JSON:',\n  JSON.stringify({\n    title: 'título da página, até 65 caracteres, com a palavra-chave principal',\n    description: 'meta description entre 120 e 160 caracteres',\n    eyebrow: 'chapéu curto, 1 a 3 palavras',\n    quickAnswer: 'parágrafo único de 250 a 500 caracteres respondendo a dúvida de forma direta',\n    tags: ['3 a 6 tags'],\n    related: ['slug1', 'slug2', 'slug3'],\n    sections: [{ title: 'título da seção', paragraphs: ['parágrafo'], bullets: ['item opcional'] }],\n    sources: [{ institution: 'órgão ou instituição', title: 'nome do documento', url: 'https://', accessedAt: '2026-08-21' }],\n  }, null, 2),\n  '',\n  'O campo \"sources\" só deve conter fontes que você tem certeza que existem. Se não tiver, devolva lista vazia.',\n].join('\\n');\n\nreturn [{ json: { alvo, system, user, cfg, chave } }];\n"
+        "jsCode": "// Escolhe a próxima página a escrever e monta o prompt.\n// Ordem de prioridade: o PRD manda terminar as páginas-pilar antes de produzir em massa\n// (§90), então respeitamos essa fila em vez de varrer o site inteiro.\n//\n// 2026-09-13 — silo por curso. O portal disputa a cauda longa INFORMACIONAL por curso\n// (exemplo, etapas I/II/III, relatório final) e manda o leitor para a categoria do\n// curso no Apostileiros. A cauda TRANSACIONAL (\"pronto\", \"pdf\", \"modelo\", marca da\n// faculdade) é da loja — nunca escrever página para ela aqui.\n\nconst cfg = $('Configuração').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\nconst publicado = $('Conteúdo publicado').first().json;\n\nconst CURSOS = {\n  'pedagogia': 'Pedagogia', 'enfermagem': 'Enfermagem', 'administracao': 'Administração',\n  'analise-e-desenvolvimento-de-sistemas': 'Análise e Desenvolvimento de Sistemas', 'direito': 'Direito',\n  'biomedicina': 'Biomedicina', 'ciencias-contabeis': 'Ciências Contábeis',\n  'servico-social': 'Serviço Social', 'recursos-humanos': 'Recursos Humanos',\n};\n// nome curto para caber no título de 65 caracteres\nconst CURTO = { 'analise-e-desenvolvimento-de-sistemas': 'ADS' };\n\n// O risco que organiza cada curso (o mesmo que estruturou os hubs) — o exemplo e o\n// relatório precisam respeitar esse limite, senão o portal ensina a fazer errado.\nconst RISCO = {\n  'pedagogia': 'confundir a extensão com aula ou estágio; a ação precisa ter público real fora da sala e cuidado com autorização e imagem de criança',\n  'enfermagem': 'informar não é atender: o estudante orienta e educa em saúde, nunca faz procedimento, triagem ou conduta clínica',\n  'administracao': 'quem se beneficia: a ação não pode virar consultoria de graça para um único dono de negócio; público e entrega coletiva',\n  'analise-e-desenvolvimento-de-sistemas': 'o sistema que ninguém mantém: preferir entrega que sobrevive sem o estudante (capacitação, material, protótipo documentado) e cuidado com dados pessoais',\n  'direito': 'a pergunta individual inevitável: o estudante informa direitos e encaminha, nunca dá consultoria nem opina sobre caso concreto',\n  'biomedicina': 'a prática do curso não cabe fora do laboratório: nada de diagnóstico, coleta ou exame; a ação é educativa e de popularização científica',\n  'ciencias-contabeis': 'o limite da orientação fiscal: educação financeira e tributária coletiva, sem escrituração nem serviço privativo do contador',\n  'servico-social': 'não ocupar o lugar do serviço: informar sobre direitos e territórios sem atender caso, sem prometer benefício',\n  'recursos-humanos': 'não prometer emprego: currículo, entrevista simulada e orientação sem coletar dado pessoal nem criar expectativa de vaga',\n};\n\n// Correspondência etapa → programa observada nos roteiros de um grupo educacional\n// (Unopar/Anhanguera) em setembro de 2026, lida nas páginas de produto da loja parceira.\n// É \"costuma\", nunca regra: varia por instituição, matriz e período letivo (§20).\nconst PROGRAMAS = {\n  'Contexto à Comunidade': 'ações ligadas ao contexto social imediato da comunidade: diagnóstico de uma necessidade local e resposta educativa ou organizativa a ela',\n  'Inovação e Empreendedorismo': 'contribuições a problemas do contexto social e ao desenvolvimento local, com foco em inovação, geração de renda e organização de pequenos negócios ou iniciativas',\n  'Sustentabilidade': 'relação da comunidade com o ambiente natural e construído: educação ambiental, redução de impactos socioambientais e cultura de cuidado',\n  'Ação e Difusão Cultural': 'valorização, produção e circulação de cultura, memória e conhecimento junto à comunidade',\n};\nconst ETAPAS = {\n  'pedagogia': { 'II': 'Sustentabilidade' },\n  'enfermagem': { 'I': 'Ação e Difusão Cultural', 'II': 'Ação e Difusão Cultural', 'III': 'Sustentabilidade', 'IV': 'Inovação e Empreendedorismo' },\n  'administracao': { 'I': 'Contexto à Comunidade', 'II': 'Inovação e Empreendedorismo', 'III': 'Sustentabilidade' },\n  'analise-e-desenvolvimento-de-sistemas': { 'I': 'Contexto à Comunidade', 'II': 'Ação e Difusão Cultural' },\n  'direito': { 'I': 'Ação e Difusão Cultural', 'II': 'Inovação e Empreendedorismo', 'III': 'Sustentabilidade', 'IV': 'Contexto à Comunidade' },\n  'biomedicina': { 'I': 'Sustentabilidade', 'II': 'Inovação e Empreendedorismo', 'III': 'Contexto à Comunidade' },\n  'ciencias-contabeis': { 'II': 'Inovação e Empreendedorismo', 'III': 'Sustentabilidade' },\n  'servico-social': { 'I': 'Ação e Difusão Cultural', 'II': 'Inovação e Empreendedorismo', 'III': 'Contexto à Comunidade' },\n  'recursos-humanos': { 'II': 'Inovação e Empreendedorismo' },\n};\n\n// Ordem: um silo por vez, do curso com mais busca para o de menos. Dentro do silo,\n// exemplo → etapas → relatório final.\nconst ORDEM_CURSOS = ['pedagogia', 'enfermagem', 'administracao', 'direito', 'ciencias-contabeis',\n                      'recursos-humanos', 'servico-social', 'biomedicina', 'analise-e-desenvolvimento-de-sistemas'];\nconst TEMAS_SILO = ['exemplo', 'etapas', 'relatorio-final'];\n\nconst PRIORIDADE = [\n  'projeto-de-extensao', 'relatorio-final', 'anhanguera', 'unopar',\n  'relatorio-final/como-preencher', 'relatorio-final/durante-a-acao',\n  'relatorio-final/resultado-da-acao', 'relatorio-final/conclusao',\n  'relatorio-final/percepcao', 'relatorio-final/depoimento-instituicao',\n  'relatorio-final/evidencias',\n  'como-fazer-projeto-de-extensao', 'ideias-projeto-de-extensao',\n  'ods', 'onde-realizar', 'evidencias',\n  'pedagogia', 'enfermagem', 'administracao', 'analise-e-desenvolvimento-de-sistemas', 'direito',\n  ...ORDEM_CURSOS.flatMap(c => TEMAS_SILO.map(t => `cursos/${c}/${t}`)),\n];\n\n// Termo que cada página P0 precisa disputar. Sem fixar isso, o modelo reescreve o\n// título com um sinônimo e a página perde a consulta principal (aconteceu com\n// /relatorio-final/, que virou \"relatório final de extensão\").\nconst PALAVRA_CHAVE = {\n  'projeto-de-extensao': 'projeto de extensão',\n  'relatorio-final': 'relatório final de atividades extensionistas',\n  'relatorio-final/como-preencher': 'como preencher o relatório final de extensão',\n  'relatorio-final/durante-a-acao': 'durante a ação projeto de extensão',\n  'relatorio-final/resultado-da-acao': 'resultado da ação projeto de extensão',\n  'relatorio-final/conclusao': 'conclusão do projeto de extensão',\n  'relatorio-final/percepcao': 'percepção das atividades extensionistas',\n  'relatorio-final/depoimento-instituicao': 'depoimento da instituição projeto de extensão',\n  'relatorio-final/evidencias': 'evidências no relatório final de extensão',\n  'como-fazer-projeto-de-extensao': 'como fazer projeto de extensão',\n  'ideias-projeto-de-extensao': 'ideias para projeto de extensão',\n  'ods': 'ODS no projeto de extensão',\n  'onde-realizar': 'onde realizar projeto de extensão',\n  'evidencias': 'evidências do projeto de extensão',\n  'anhanguera': 'projeto de extensão Anhanguera',\n  'unopar': 'projeto de extensão Unopar',\n};\nfor (const c of Object.keys(CURSOS)) {\n  const nome = CURTO[c] || CURSOS[c];\n  PALAVRA_CHAVE[`cursos/${c}/ideias`] = `temas ideias projeto de extensão ${nome}`;\n  PALAVRA_CHAVE[`cursos/${c}/exemplo`] = `exemplo de projeto de extensão ${nome}`;\n  PALAVRA_CHAVE[`cursos/${c}/etapas`] = `projeto de extensão I II III ${nome}`;\n  PALAVRA_CHAVE[`cursos/${c}/relatorio-final`] = `relatório final projeto de extensão ${nome}`;\n}\n\nconst porSlug = Object.fromEntries(paginas.map(p => [p.slug, p]));\nlet alvo = null;\n\nif (cfg.alvo) {\n  alvo = porSlug[cfg.alvo];\n  if (!alvo) throw new Error(`A página \"${cfg.alvo}\" não existe no CMS. Crie-a primeiro no painel.`);\n} else {\n  for (const slug of PRIORIDADE) {\n    const p = porSlug[slug];\n    if (p && p.words < cfg.minPalavras) { alvo = p; break; }\n  }\n}\nif (!alvo) {\n  // A fila de prioridade acabou — as páginas-pilar já passaram do mínimo. Mas o site\n  // ainda tem stubs no ar (os ~160 palavras de /como-tirar-fotos.../ e das páginas de\n  // ideias por curso), que a lista PRIORIDADE nunca cita. Em vez de parar de produzir,\n  // caímos para a fila geral: qualquer página abaixo do mínimo, da mais curta primeiro.\n  const restantes = paginas\n    .filter(p => p.words < cfg.minPalavras)\n    .sort((a, b) => a.words - b.words || a.slug.localeCompare(b.slug));\n  alvo = restantes[0] || null;\n}\nif (!alvo) return [{ json: { nada: true, motivo: 'Todas as páginas do site já passaram do mínimo de palavras.' } }];\n\n// Estrutura pedida pelo PRD, por tipo de página.\nconst ROTEIRO = {\n  guide: ['O que é / resposta direta', 'Para que serve', 'Como funciona na prática',\n          'Como escolher (problema, público, local)', 'Passo a passo', 'Exemplo completo identificado como exemplo',\n          'Erros comuns', 'Como isso aparece no relatório final', 'Próximos passos'],\n  course: ['Como funciona um projeto de extensão neste curso', 'Competências do curso que podem ser aplicadas',\n           'Problemas que o curso consegue enfrentar', 'Locais adequados', 'Públicos possíveis',\n           'ODS relacionados e por quê', 'Exemplos de atividades', 'Materiais necessários',\n           'Evidências que fazem sentido', 'O que muda no relatório final', 'Erros comuns'],\n  institution: ['Como funcionam as atividades extensionistas nesta instituição',\n                'Como interpretar o roteiro da disciplina', 'Estrutura normalmente solicitada',\n                'ODS', 'Comunidade externa e local da atividade', 'Execução',\n                'Relatório final', 'Evidências', 'Principais dúvidas', 'Erros recorrentes'],\n};\n\n// Guias do silo de curso: cada tema tem roteiro e ângulo PRÓPRIOS. O molde genérico\n// de 9 seções é o que fazia toda página parecer a mesma (lição do Sprint C).\nconst silo = alvo.slug.match(/^cursos\\/([a-z0-9-]+)\\/([a-z0-9-]+)$/);\nconst cursoSlug = silo ? silo[1] : null;\nconst temaSilo = silo ? silo[2] : null;\nconst nomeCurso = cursoSlug ? CURSOS[cursoSlug] : null;\nlet roteiro = ROTEIRO[alvo.kind] || ROTEIRO.guide;\nlet briefing = '';\n\nif (cursoSlug && temaSilo === 'exemplo') {\n  roteiro = ['Contexto e problema observado (por que essa ação e não outra)', 'Público e local, e como se chegou até eles',\n             'Objetivo geral e objetivos específicos, escritos como o roteiro costuma pedir', 'Justificativa ligada ao curso',\n             'Metodologia: o que foi feito, em que ordem, com que material', 'Cronograma realista de uma disciplina',\n             'Evidências reunidas (e as que NÃO se deve produzir)', 'Resultado da ação e como medi-lo sem inflar',\n             'Percepção do estudante: o que se aprende escrevendo', 'Como adaptar este exemplo ao seu roteiro'];\n  briefing = [\n    `Esta página é UM exemplo fictício e completo de projeto de extensão em ${nomeCurso}, comentado seção por seção.`,\n    'Escolha UMA ideia e a desenvolva do início ao fim — não faça lista de ideias (a página /cursos/' + cursoSlug + '/ideias/ já é a lista).',\n    'Abra o exemplo declarando que é fictício e, em cada seção, primeiro mostre o TRECHO do exemplo (como o estudante escreveria) e depois o COMENTÁRIO (por que está assim, o que o roteiro costuma cobrar, o erro comum ali).',\n    `Limite profissional que o exemplo precisa respeitar: ${RISCO[cursoSlug]}.`,\n    'Não reexplique o que é extensão nem como se faz um projeto em geral: isso mora em /projeto-de-extensao/ e /como-fazer-projeto-de-extensao/ — cite e siga.',\n    'Nomes de pessoas, escola, bairro e números do exemplo são inventados de propósito e devem ser apresentados assim.',\n  ].join('\\n');\n}\nif (cursoSlug && temaSilo === 'etapas') {\n  const mapa = ETAPAS[cursoSlug] || {};\n  const linhas = Object.entries(mapa).map(([e, p]) => `  - Projeto de Extensão ${e}: costuma vincular-se ao Programa de ${p}`);\n  roteiro = ['O que significam I, II, III (e IV): etapas de uma mesma trilha, não disciplinas soltas',\n             'Os programas de extensão e o que cada um pede', `Etapa por etapa em ${nomeCurso}: programa, tipo de ação e o que muda`,\n             'Como descobrir a SUA etapa e o SEU programa no roteiro (o que conferir antes de escolher a ação)',\n             'Ações que cabem em cada programa neste curso (com público e entrega)', 'O que muda no relatório de uma etapa para outra',\n             'Erros comuns: repetir a ação da etapa anterior, escolher ação fora do programa, confundir componente curricular',\n             'Perguntas que o leitor faz na busca (responda uma a uma)', 'Próximos passos'];\n  briefing = [\n    `Esta página responde a quem busca \"projeto de extensão II ${nomeCurso}\", \"projeto de extensão I ${nomeCurso}\" etc.: o estudante quer saber o que é a etapa, a que programa ela se liga e como fazer a ação daquela etapa.`,\n    'FATOS que você pode usar (observados em roteiros de um grupo educacional em setembro de 2026; escreva sempre \"costuma\", \"em roteiros recentes\", e mande conferir no roteiro da disciplina, porque varia por instituição, matriz e período letivo):',\n    ...linhas,\n    'Programas e o que cada um pede:',\n    ...Object.entries(PROGRAMAS).map(([p, d]) => `  - Programa de ${p}: ${d}`),\n    'Etapas sem correspondência acima: diga que o programa consta no roteiro e ensine a localizar (nome do componente curricular, campo \"programa de extensão\"). NÃO invente a correspondência.',\n    'NÃO afirme quantidade de horas, semestre, prazo, nota ou campo obrigatório como fato.',\n    `Limite profissional do curso: ${RISCO[cursoSlug]}.`,\n    'Não reexplique o que é extensão em geral (mora em /projeto-de-extensao/).',\n  ].join('\\n');\n}\nif (cursoSlug && temaSilo === 'relatorio-final') {\n  roteiro = [`O que muda no relatório final quando o curso é ${nomeCurso} (resposta direta)`,\n             'O que conta como RESULTADO neste curso (e o que parece resultado mas não é)',\n             'Evidências que fazem sentido aqui — e as que expõem pessoas ou ultrapassam o papel do estudante',\n             'Como descrever a ação sem ultrapassar o limite profissional do curso', 'Como ligar a ação às competências do curso sem inventar',\n             'Como escrever a percepção sem cair no genérico', 'Erros que mais derrubam o relatório neste curso',\n             'Trecho de exemplo (fictício) de duas seções do relatório', 'Checklist final e próximos passos'];\n  briefing = [\n    `Esta página é ESPECÍFICA de ${nomeCurso}: o que muda no relatório final por causa do curso.`,\n    'Os campos do relatório em si (durante a ação, resultado da ação, conclusão, percepção, evidências, depoimento) JÁ têm página própria no cluster /relatorio-final/ — cite e linke, não reexplique o campo. Aqui só entra o que é diferente por ser este curso.',\n    `Limite profissional que organiza tudo: ${RISCO[cursoSlug]}.`,\n    'Não afirme campo obrigatório, prazo ou nota como fato; o roteiro da disciplina manda.',\n  ].join('\\n');\n}\n\n// Para as páginas de faculdade, mandamos o texto da OUTRA faculdade junto com a ordem\n// explícita de não repetir — é o problema nomeado no §22 do PRD.\nlet contraste = '';\nif (alvo.kind === 'institution') {\n  const irmas = paginas.filter(p => p.kind === 'institution' && p.slug !== alvo.slug).map(p => p.slug);\n  contraste = `\\nEstas outras páginas de faculdade já existem: ${irmas.join(', ')}. `\n    + `NÃO reaproveite parágrafos, exemplos ou justificativas delas. O conteúdo textual precisa ser próprio desta instituição.`;\n}\n// Guias do silo: as irmãs do mesmo tema em outros cursos são a armadilha de paráfrase.\nif (cursoSlug) {\n  const irmas = paginas.filter(p => p.slug.startsWith('cursos/') && p.slug.endsWith('/' + temaSilo) && p.slug !== alvo.slug && p.words > 300).map(p => p.slug);\n  if (irmas.length) contraste += `\\nJá existem páginas do mesmo tema para outros cursos (${irmas.join(', ')}). NÃO reaproveite a estrutura de frase nem os exemplos delas: o que faz esta página valer é o que só vale para ${nomeCurso}.`;\n}\n\nconst guiaAtual = (publicado.guides || []).find(g => g.slug === alvo.slug);\nconst conteudoAtual = guiaAtual\n  ? `\\n\\nCONTEÚDO ATUAL DESTA PÁGINA (amplie e aprofunde, não jogue fora o que está bom):\\n`\n    + `Resposta rápida: ${guiaAtual.quickAnswer}\\n`\n    + (guiaAtual.sections || []).map(s => `## ${s.title}\\n${(s.paragraphs || []).join('\\n')}`).join('\\n')\n  : '';\n\n// related só pode apontar para GUIA publicado: rascunho vira link 404 no ar, e o\n// componente de relacionados só resolve guias (curso e faculdade viram silêncio).\nconst slugsDisponiveis = paginas.filter(p => p.published !== false && p.kind === 'guide').map(p => `${p.slug} (${p.title})`).join('\\n');\n\nconst system = [\n  'Você é redator do Extensão Fácil, um portal brasileiro que orienta estudantes de graduação a planejar,',\n  'executar e documentar atividades de extensão universitária.',\n  '',\n  'REGRAS EDITORIAIS OBRIGATÓRIAS:',\n  '1. Português do Brasil, tom editorial e direto. Nada de linguagem publicitária ou promessa de resultado fácil.',\n  '2. NUNCA afirme regra institucional específica (prazo, quantidade de horas, campo obrigatório, nota) como se fosse',\n  '   fato verificado. Quando o assunto for exigência de faculdade, diga que varia por curso, matriz e período letivo,',\n  '   e oriente a consultar o roteiro oficial no ambiente acadêmico do aluno.',\n  '3. Exemplos são bem-vindos, mas todo exemplo deve estar explicitamente identificado como exemplo fictício.',\n  '   Jamais apresente um exemplo como atividade real já realizada.',\n  '4. Não invente estatística, pesquisa, número ou citação. Se não tem fonte, não afirme.',\n  '5. Não escreva texto genérico que serviria para qualquer página. Cada seção precisa ser específica ao tema.',\n  '6. Não copie estrutura de frase nem parágrafos de outras páginas do portal.',\n  '7. Nada de CTA comercial no meio do conteúdo. Nunca escreva \"modelo pronto\", \"pdf pronto\", \"baixar\" ou nome de',\n  '   faculdade como promessa: a cauda transacional é da loja parceira, não deste portal.',\n  '8. O leitor típico cumpre uma DISCIPLINA de extensão e recebe um roteiro no ambiente acadêmico.',\n  '   Não presuma edital, bolsa, orientador designado ou submissão a comitê — isso é outro contexto.',\n  '',\n  'FORMATO DA RESPOSTA: apenas um objeto JSON válido, sem markdown, sem crase, sem comentário antes ou depois.',\n].join('\\n');\n\nconst chave = PALAVRA_CHAVE[alvo.slug] || '';\n\nconst user = [\n  `Escreva o conteúdo completo da página \"${alvo.title || alvo.slug}\" (${alvo.route}).`,\n  `Tipo: ${alvo.kind}. Intenção de busca: ${alvo.intent}.`,\n  chave ? `PALAVRA-CHAVE PRINCIPAL: \"${chave}\". Todas essas palavras precisam aparecer no \"title\" e na \"quickAnswer\" — não troque por sinônimo. Pode intercalar outras palavras para o título ficar natural: \"Durante a ação: o que escrever no projeto de extensão\" é melhor que grudar a expressão inteira no começo.` : '',\n  nomeCurso && CURTO[cursoSlug] ? `No título use a sigla \"${CURTO[cursoSlug]}\"; no texto, escreva o nome completo \"${nomeCurso}\" pelo menos três vezes.` : '',\n  'O \"title\" segue o padrão do português: maiúscula só na primeira palavra e em nomes próprios. Depois de dois-pontos, continue em MINÚSCULA. NÃO escreva Em Caixa Alta Cada Palavra.',\n  briefing ? `\\nBRIEFING DESTA PÁGINA:\\n${briefing}\\n` : '',\n  `Mínimo de ${cfg.minPalavras} palavras no total, distribuídas nas seções.`,\n  `Escreva pelo menos ${cfg.minSecoes} seções, seguindo este roteiro (adapte os títulos, não copie literalmente):`,\n  roteiro.map((s, i) => `  ${i + 1}. ${s}`).join('\\n'),\n  contraste,\n  '',\n  'Inclua de 4 a 6 perguntas frequentes no campo \"faq\", escritas como o leitor digita na busca, cada resposta com 2 ou 3 frases que se sustentem sozinhas.',\n  'Escolha de 3 a 4 slugs desta lista para o campo \"related\" (só slugs que existem aqui):',\n  slugsDisponiveis,\n  conteudoAtual,\n  '',\n  'Responda com este JSON:',\n  JSON.stringify({\n    title: 'título da página, até 65 caracteres, com a palavra-chave principal',\n    description: 'meta description entre 120 e 160 caracteres',\n    eyebrow: 'chapéu curto, 1 a 3 palavras',\n    quickAnswer: 'parágrafo único de 250 a 500 caracteres respondendo a dúvida de forma direta',\n    tags: ['3 a 6 tags'],\n    related: ['slug1', 'slug2', 'slug3'],\n    sections: [{ title: 'título da seção', paragraphs: ['parágrafo'], bullets: ['item opcional'] }],\n    faq: [{ q: 'pergunta como o leitor digita', a: 'resposta em 2 ou 3 frases' }],\n    sources: [{ institution: 'órgão ou instituição', title: 'nome do documento', url: 'https://', accessedAt: '2026-08-21' }],\n  }, null, 2),\n  '',\n  'O campo \"sources\" só deve conter fontes que você tem certeza que existem. Se não tiver, devolva lista vazia.',\n].join('\\n');\n\nreturn [{ json: { alvo, system, user, cfg, chave } }];\n"
       },
       "id": "7d5b95c1-04b6-42c1-9c1c-de687f185ca9",
       "name": "Escolher alvo e montar prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        420,
+        432,
         80
       ],
-      "notes": "Fila do §90 do PRD e as regras editoriais que vão no prompt.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "Fila do §90 do PRD e as regras editoriais que vão no prompt."
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://closeai.nutef.com/v1/chat/completions",
-        "options": {
-          "timeout": 600000
-        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -188,7 +160,10 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $('Configuração').first().json.modelo, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}"
+        "jsonBody": "={{ JSON.stringify({ model: $('Configuração').first().json.modelo, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}",
+        "options": {
+          "timeout": 600000
+        }
       },
       "id": "afde203f-465b-4a9b-8705-21bf306700b0",
       "name": "Redator (qwenproxy)",
@@ -201,31 +176,28 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 60000,
-      "notes": "closeai.nutef.com (qwenproxy). ~100s por artigo. Para voltar ao chatgptproxy: troque a URL para https://gptproxy.nutef.com/v1/chat/completions, o modelo para gpt-5 e o gptToken pela chave daquele serviço.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "closeai.nutef.com (qwenproxy). ~100s por artigo. Para voltar ao chatgptproxy: troque a URL para https://gptproxy.nutef.com/v1/chat/completions, o modelo para gpt-5 e o gptToken pela chave daquele serviço."
     },
     {
       "parameters": {
-        "jsCode": "\n// Portão de qualidade. O PRD (§64) exige revisão antes de publicar; aqui rejeitamos\n// o que claramente não passa, para não gravar lixo no banco.\n\nconst resposta = $json.choices?.[0]?.message?.content;\nif (!resposta) throw new Error('O qwenproxy não devolveu conteúdo: ' + JSON.stringify($json).slice(0, 500));\n\nconst alvo = $('Escolher alvo e montar prompt').first().json.alvo;\nconst cfg = $('Configuração').first().json;\nconst publicado = $('Conteúdo publicado').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\n\n// O modelo às vezes embrulha o JSON em bloco de código, mesmo proibido no prompt.\nlet bruto = resposta.trim();\nconst cerca = bruto.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (cerca) bruto = cerca[1].trim();\nconst inicio = bruto.indexOf('{');\nconst fim = bruto.lastIndexOf('}');\nif (inicio < 0 || fim < 0) throw new Error('Resposta sem JSON reconhecível: ' + bruto.slice(0, 300));\n\nlet art;\ntry { art = JSON.parse(bruto.slice(inicio, fim + 1)); }\ncatch (e) { throw new Error('JSON inválido do modelo: ' + e.message + ' | trecho: ' + bruto.slice(0, 300)); }\n\nconst problemas = [];\n\n// A palavra-chave precisa sobreviver ao título, senão a página não disputa a consulta.\nconst semAcento = (t) => (t || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst chave = $('Escolher alvo e montar prompt').first().json.chave;\nif (chave) {\n  // Exigir a frase colada empurrava o título para uma construção artificial. Basta que\n  // todas as palavras da chave estejam presentes: o título fica natural e a página\n  // continua disputando a consulta.\n  const t = semAcento(art.title);\n  const faltando = semAcento(chave).split(/\\s+/).filter(w => w.length > 2 && !t.includes(w));\n  if (faltando.length) problemas.push(`o título não contém ${faltando.map(w => `\"${w}\"`).join(', ')} da palavra-chave \"${chave}\"`);\n}\nconst secoes = Array.isArray(art.sections) ? art.sections : [];\nconst textos = secoes.flatMap(s => [...(s.paragraphs || []), ...(s.bullets || [])]);\nconst palavras = [art.quickAnswer, ...secoes.map(s => s.title), ...textos].join(' ').trim().split(/\\s+/).filter(Boolean).length;\n\nif (!art.title) problemas.push('sem título');\nif (!art.description || art.description.length < 80) problemas.push('description curta demais');\nif (art.description && art.description.length > 200) problemas.push('description longa demais');\nif (!art.quickAnswer || art.quickAnswer.length < 180) problemas.push('resposta rápida curta demais');\nif (secoes.length < cfg.minSecoes) problemas.push(`só ${secoes.length} seções (mínimo ${cfg.minSecoes})`);\nif (palavras < cfg.minPalavras) problemas.push(`só ${palavras} palavras (mínimo ${cfg.minPalavras})`);\nif (secoes.some(s => !s.title || !(s.paragraphs || []).length)) problemas.push('seção sem título ou sem parágrafo');\n\n// Marcas de rascunho que o modelo às vezes deixa\nconst suspeito = /lorem ipsum|\\[inserir|\\bXXX\\b|preencher aqui|TODO:/i;\nif (suspeito.test(JSON.stringify(art))) problemas.push('sobrou texto de preenchimento');\n\n// §25/§22: nenhum parágrafo longo pode ser idêntico ao de outra página já publicada\nconst corpus = [];\nfor (const g of publicado.guides || []) {\n  if (g.slug === alvo.slug) continue;\n  for (const s of g.sections || []) for (const p of s.paragraphs || []) corpus.push({ slug: g.slug, p });\n}\nfor (const p of textos) {\n  if (p.length < 120) continue;\n  const igual = corpus.find(c => c.p.trim() === p.trim());\n  if (igual) { problemas.push(`parágrafo idêntico ao de /${igual.slug}/`); break; }\n}\n\n// related só pode apontar para slug que existe\nconst existentes = new Set(paginas.map(p => p.slug));\nconst related = (art.related || []).filter(s => existentes.has(s) && s !== alvo.slug).slice(0, 4);\nif (!related.length) problemas.push('nenhum link interno válido');\n\nif (problemas.length) {\n  throw new Error(`Conteúdo reprovado para ${alvo.route}: ${problemas.join('; ')}`);\n}\n\nreturn [{\n  json: {\n    slug: alvo.slug,\n    kind: alvo.kind,\n    title: art.title,\n    description: art.description,\n    eyebrow: art.eyebrow || alvo.eyebrow || '',\n    quickAnswer: art.quickAnswer,\n    intent: alvo.intent,\n    tags: (art.tags || []).slice(0, 6),\n    related,\n    extra: alvo.extra || {},\n    author: 'equipe-extensao-facil',\n    reviewedAt: new Date().toISOString().slice(0, 10),\n    published: true,\n    sections: secoes.map(s => ({ title: s.title, paragraphs: s.paragraphs || [], bullets: s.bullets || [] })),\n    sources: Array.isArray(art.sources) ? art.sources : [],\n    _resumo: { rota: alvo.route, palavras, secoes: secoes.length, fontes: (art.sources || []).length },\n  },\n}];\n"
+        "jsCode": "\n// Portão de qualidade. O PRD (§64) exige revisão antes de publicar; aqui rejeitamos\n// o que claramente não passa, para não gravar lixo no banco.\n\nconst resposta = $json.choices?.[0]?.message?.content;\nif (!resposta) throw new Error('O qwenproxy não devolveu conteúdo: ' + JSON.stringify($json).slice(0, 500));\n\nconst alvo = $('Escolher alvo e montar prompt').first().json.alvo;\nconst cfg = $('Configuração').first().json;\nconst publicado = $('Conteúdo publicado').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\n\n// O modelo às vezes embrulha o JSON em bloco de código, mesmo proibido no prompt.\nlet bruto = resposta.trim();\nconst cerca = bruto.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (cerca) bruto = cerca[1].trim();\nconst inicio = bruto.indexOf('{');\nconst fim = bruto.lastIndexOf('}');\nif (inicio < 0 || fim < 0) throw new Error('Resposta sem JSON reconhecível: ' + bruto.slice(0, 300));\n\nlet art;\ntry { art = JSON.parse(bruto.slice(inicio, fim + 1)); }\ncatch (e) { throw new Error('JSON inválido do modelo: ' + e.message + ' | trecho: ' + bruto.slice(0, 300)); }\n\nconst problemas = [];\n\n// A palavra-chave precisa sobreviver ao título, senão a página não disputa a consulta.\nconst semAcento = (t) => (t || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst chave = $('Escolher alvo e montar prompt').first().json.chave;\nif (chave) {\n  // Exigir a frase colada empurrava o título para uma construção artificial. Basta que\n  // todas as palavras da chave estejam presentes: o título fica natural e a página\n  // continua disputando a consulta.\n  const t = semAcento(art.title);\n  const faltando = semAcento(chave).split(/\\s+/).filter(w => w.length > 2 && !t.includes(w));\n  if (faltando.length) problemas.push(`o título não contém ${faltando.map(w => `\"${w}\"`).join(', ')} da palavra-chave \"${chave}\"`);\n}\nconst secoes = Array.isArray(art.sections) ? art.sections : [];\nconst textos = secoes.flatMap(s => [...(s.paragraphs || []), ...(s.bullets || [])]);\nconst palavras = [art.quickAnswer, ...secoes.map(s => s.title), ...textos].join(' ').trim().split(/\\s+/).filter(Boolean).length;\n\nif (!art.title) problemas.push('sem título');\nif (!art.description || art.description.length < 80) problemas.push('description curta demais');\nif (art.description && art.description.length > 200) problemas.push('description longa demais');\nif (!art.quickAnswer || art.quickAnswer.length < 180) problemas.push('resposta rápida curta demais');\nif (secoes.length < cfg.minSecoes) problemas.push(`só ${secoes.length} seções (mínimo ${cfg.minSecoes})`);\nif (palavras < cfg.minPalavras) problemas.push(`só ${palavras} palavras (mínimo ${cfg.minPalavras})`);\nif (secoes.some(s => !s.title || !(s.paragraphs || []).length)) problemas.push('seção sem título ou sem parágrafo');\n\n// Marcas de rascunho que o modelo às vezes deixa\nconst suspeito = /lorem ipsum|\\[inserir|\\bXXX\\b|preencher aqui|TODO:/i;\nif (suspeito.test(JSON.stringify(art))) problemas.push('sobrou texto de preenchimento');\n\n// §25/§22: nenhum parágrafo longo pode ser idêntico ao de outra página já publicada\nconst corpus = [];\nfor (const g of publicado.guides || []) {\n  if (g.slug === alvo.slug) continue;\n  for (const s of g.sections || []) for (const p of s.paragraphs || []) corpus.push({ slug: g.slug, p });\n}\nfor (const p of textos) {\n  if (p.length < 120) continue;\n  const igual = corpus.find(c => c.p.trim() === p.trim());\n  if (igual) { problemas.push(`parágrafo idêntico ao de /${igual.slug}/`); break; }\n}\n\n// related só pode apontar para slug que existe E está publicado — link para rascunho\n// vira 404 no ar (os stubs do silo por curso nascem published=false)\nconst existentes = new Set(paginas.filter(p => p.published !== false).map(p => p.slug));\nconst related = (art.related || []).filter(s => existentes.has(s) && s !== alvo.slug).slice(0, 4);\nif (!related.length) problemas.push('nenhum link interno válido');\n\n// FAQ: sai no bloco visível e no FAQPage do JSON-LD (mesmo dado). Só pares completos.\nconst faq = (Array.isArray(art.faq) ? art.faq : [])\n  .filter(f => f && typeof f.q === 'string' && typeof f.a === 'string' && f.q.trim() && f.a.trim().length >= 40)\n  .map(f => ({ q: f.q.trim(), a: f.a.trim() })).slice(0, 8);\nif (faq.length < 3) problemas.push(`só ${faq.length} perguntas frequentes válidas (mínimo 3)`);\n\nif (problemas.length) {\n  throw new Error(`Conteúdo reprovado para ${alvo.route}: ${problemas.join('; ')}`);\n}\n\nreturn [{\n  json: {\n    slug: alvo.slug,\n    kind: alvo.kind,\n    title: art.title,\n    description: art.description,\n    eyebrow: art.eyebrow || alvo.eyebrow || '',\n    quickAnswer: art.quickAnswer,\n    intent: alvo.intent,\n    tags: (art.tags || []).slice(0, 6),\n    related,\n    extra: alvo.extra || {},\n    author: 'equipe-extensao-facil',\n    reviewedAt: new Date().toISOString().slice(0, 10),\n    // Preserva o estado da página: stub criado como rascunho continua rascunho até\n    // alguém publicar no painel (§64); página que já está no ar continua no ar.\n    published: alvo.published !== false,\n    faq,\n    // o modelo devolve bullets: [\"\"] quando não tem item — vira marcador vazio na página\n    sections: secoes.map(s => ({ title: s.title, paragraphs: (s.paragraphs || []).filter(p => typeof p === 'string' && p.trim()),\n      bullets: (s.bullets || []).filter(b => typeof b === 'string' && b.trim()) })),\n    sources: Array.isArray(art.sources) ? art.sources : [],\n    _resumo: { rota: alvo.route, palavras, secoes: secoes.length, fontes: (art.sources || []).length },\n  },\n}];\n"
       },
       "id": "951e189d-9a17-485d-a096-949f86ffe6eb",
       "name": "Validar conteúdo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1084,
+        1088,
         80
       ],
-      "notes": "Reprova texto raso, parágrafo repetido, link interno inválido e marca de rascunho.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "Reprova texto raso, parágrafo repetido, link interno inválido e marca de rascunho."
     },
     {
       "parameters": {
         "method": "PUT",
         "url": "https://extensaofacil.com.br/admin/api/pages/detail",
-        "options": {
-          "timeout": 60000
-        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -237,24 +209,29 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "753247e8-1d7e-4bd3-b268-ca283a788d52",
       "name": "Gravar no CMS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1304,
+        1312,
         80
       ],
-      "notes": "Só grava no banco. O site NÃO muda até alguém publicar.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "Só grava no banco. O site NÃO muda até alguém publicar."
     },
     {
       "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
             "version": 2
           },
           "conditions": [
@@ -278,7 +255,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1524,
+        1536,
         80
       ]
     },
@@ -286,9 +263,6 @@
       "parameters": {
         "method": "POST",
         "url": "https://extensaofacil.com.br/admin/api/publish",
-        "options": {
-          "timeout": 180000
-        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -300,7 +274,10 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ slugs: [ $('Validar conteúdo').first().json.slug ] }) }}"
+        "jsonBody": "={{ JSON.stringify({ slugs: [ $('Validar conteúdo').first().json.slug ] }) }}",
+        "options": {
+          "timeout": 180000
+        }
       },
       "id": "bb0a7ff3-f8f0-40a0-945e-ea08be14fd56",
       "name": "Publicar",
@@ -308,30 +285,54 @@
       "typeVersion": 4.2,
       "position": [
         1744,
-        -20
+        -16
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://api.telegram.org/bot{{ $('Configuração').first().json.telegramToken }}/sendMessage",
-        "options": {
-          "timeout": 60000
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chat_id: $('Configuração').first().json.telegramChatId, parse_mode: 'HTML', disable_web_page_preview: true, text: '<b>Extensão Fácil — texto novo</b>\\n' + $('Validar conteúdo').first().json.title + '\\n' + $('Validar conteúdo').first().json._resumo.rota + ' · ' + $('Validar conteúdo').first().json._resumo.palavras + ' palavras · ' + $('Validar conteúdo').first().json._resumo.secoes + ' seções · ' + $('Validar conteúdo').first().json._resumo.fontes + ' fontes A CONFERIR\\n\\n' + ($('Configuração').first().json.publicarAutomaticamente ? 'Publicado.' : 'Salvo como rascunho. Revise e publique em https://extensaofacil.com.br/admin/') }) }}"
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Configuração').first().json.telegramChatId, parse_mode: 'HTML', disable_web_page_preview: true, text: '<b>Extensão Fácil — texto novo</b>\\n' + $('Validar conteúdo').first().json.title + '\\n' + $('Validar conteúdo').first().json._resumo.rota + ' · ' + $('Validar conteúdo').first().json._resumo.palavras + ' palavras · ' + $('Validar conteúdo').first().json._resumo.secoes + ' seções · ' + $('Validar conteúdo').first().json._resumo.fontes + ' fontes A CONFERIR\\n\\n' + ($('Configuração').first().json.publicarAutomaticamente ? 'Publicado.' : 'Salvo como rascunho. Revise e publique em https://extensaofacil.com.br/admin/') }) }}",
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "4bc1e847-46b1-4d57-86e5-3cab6ad665ac",
       "name": "Avisar no Telegram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1964,
+        1968,
         80
       ],
-      "notes": "As fontes citadas NÃO são verificadas automaticamente: gov.br e sites de universidade devolvem 403 para o IP da VPS, então a checagem daria falso negativo. Confira os links na revisão, antes de publicar.",
-      "notesInFlow": true
+      "notesInFlow": true,
+      "notes": "As fontes citadas NÃO são verificadas automaticamente: gov.br e sites de universidade devolvem 403 para o IP da VPS, então a checagem daria falso negativo. Confira os links na revisão, antes de publicar."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            },
+            {
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "id": "89032bfd-38fb-4282-aad3-e6940236b9cd",
+      "name": "Duas vezes por dia",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        192
+      ],
+      "notesInFlow": true,
+      "notes": "Ligue quando confiar no fluxo. Cada disparo escreve UMA página da fila."
     },
     {
       "parameters": {
@@ -370,17 +371,6 @@
   ],
   "connections": {
     "Executar à mão": {
-      "main": [
-        [
-          {
-            "node": "Configuração",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "A cada 6 horas": {
       "main": [
         [
           {
@@ -508,11 +498,21 @@
         ],
         []
       ]
+    },
+    "Duas vezes por dia": {
+      "main": [
+        [
+          {
+            "node": "Configuração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "errorWorkflow": "2EqBWDR9cJXUovah"
-  },
-  "pinData": {}
+  }
 }

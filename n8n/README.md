@@ -2,8 +2,12 @@
 
 ## extensaofacil-redator01
 
-Escreve UMA página por execução, na ordem de prioridade do PRD (§90): páginas-pilar
-primeiro, depois o cluster do relatório final, faculdades e cursos.
+Escreve UMA página por execução (07h e 19h UTC), na ordem de prioridade do PRD (§90):
+páginas-pilar primeiro, depois o cluster do relatório final, faculdades, cursos e, desde
+13/09/2026, os guias do silo por curso (`cursos/<curso>/{exemplo,etapas,relatorio-final}`),
+um curso por vez. Cada tema do silo tem roteiro e briefing próprios no nó "Escolher alvo"
+(o molde genérico de 9 seções era o que fazia toda página parecer a mesma). Página que
+era rascunho continua rascunho depois de escrita; a FAQ vem do mesmo JSON.
 
 **Grava no CMS mas não publica.** O site só muda quando alguém clica Publicar em
 <https://extensaofacil.com.br/admin/> — é o portão de revisão editorial do §64.
