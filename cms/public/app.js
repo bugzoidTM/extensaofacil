@@ -67,16 +67,24 @@ function listView() {
     ...Object.entries(KINDS).map(([v, l]) => el("option", { value: v, selected: state.kind === v }, l)));
   kind.onchange = () => { state.kind = kind.value; renderList(); };
 
-  const rascunhos = state.pages.filter((p) => !p.published).length;
+  // Rascunho VAZIO é só uma vaga na fila do redator automático — não tem o que revisar
+  // nem publicar. Contar os dois juntos fazia parecer que havia 26 páginas esperando
+  // clique (2026-09-13).
+  const naFila = state.pages.filter((p) => !p.published && p.semSecoes).length;
+  const rascunhos = state.pages.filter((p) => !p.published && !p.semSecoes).length;
   const filtroRascunho = el("button", {
     className: state.soRascunhos ? "primary" : "",
     onclick: () => { state.soRascunhos = !state.soRascunhos; render(); },
-  }, state.soRascunhos ? `mostrando só rascunhos (${rascunhos})` : `ver só rascunhos (${rascunhos})`);
+  }, state.soRascunhos ? `mostrando só rascunhos para revisar (${rascunhos})` : `ver só rascunhos para revisar (${rascunhos})`);
+  const avisoFila = naFila
+    ? el("span", { className: "msg", title: "O redator escreve uma por vez, às 07h e às 19h (UTC), e avisa no Telegram. Nada a fazer até lá." },
+        `${naFila} na fila do redator`)
+    : "";
 
   const items = el("div", { id: "items" });
   const box = el("div", { className: "panel list" },
     el("header", {}, search, kind,
-      rascunhos ? filtroRascunho : "",
+      rascunhos ? filtroRascunho : "", avisoFila,
       el("button", { onclick: newPage }, "+ Nova página")), items);
   renderList(items);
   return box;
@@ -87,7 +95,7 @@ function renderList(container = $("#items")) {
   const q = state.filter.toLowerCase();
   const rows = state.pages.filter((p) =>
     (!state.kind || p.kind === state.kind) &&
-    (!state.soRascunhos || !p.published) &&
+    (!state.soRascunhos || (!p.published && !p.semSecoes)) &&
     (!q || p.title.toLowerCase().includes(q) || p.slug.includes(q)));
   container.replaceChildren(...rows.map((p) => {
     const btn = el("button", {
@@ -97,7 +105,7 @@ function renderList(container = $("#items")) {
       el("b", {}, p.title || p.slug),
       el("span", {}, `${p.route} · ${p.words} palavras · ${p.resumo}`));
     if (p.pending) btn.querySelector("b").append(el("span", { className: "tag pending" }, "não publicado"));
-    if (!p.published) btn.querySelector("b").append(el("span", { className: "tag off" }, "rascunho"));
+    if (!p.published) btn.querySelector("b").append(el("span", { className: "tag off" }, p.semSecoes ? "na fila do redator" : "rascunho para revisar"));
     return btn;
   }));
   if (!rows.length) container.replaceChildren(el("p", { className: "empty" }, "Nada encontrado."));
@@ -290,7 +298,10 @@ function editorView() {
 
   const bar = el("div", { className: "bar" },
     el("button", { id: "save", className: "primary", disabled: !state.dirty, onclick: save }, state.dirty ? "Salvar alterações" : "Salvo"),
-    el("button", { onclick: () => publish([page.slug]), disabled: state.busy }, "Publicar esta página"),
+    // publicar um rascunho não muda nada no site (ele fica fora do payload); o botão
+    // ficava ativo e parecia quebrado
+    el("button", { onclick: () => publish([page.slug]), disabled: state.busy || !page.published,
+      title: page.published ? "" : "Rascunho não vai ao ar. Aprove (marque Publicada) e salve." }, "Publicar esta página"),
     el("a", { href: "https://extensaofacil.com.br" + page.route, target: "_blank", className: "msg", style: "margin-left:6px" }, "ver no site ↗"),
     el("div", { className: "grow" }),
     el("button", { className: "danger", onclick: removePage }, "Excluir"));
@@ -378,10 +389,13 @@ function render() {
     el("span", { className: "status" },
       st.pending ? `${st.pending} página(s) com alteração não publicada` : "tudo publicado",
       (() => {
-        const r = state.pages.filter((p) => !p.published).length;
+        const r = state.pages.filter((p) => !p.published && !p.semSecoes).length;
+        const fila = state.pages.filter((p) => !p.published && p.semSecoes).length;
         // "Publicar tudo" NÃO leva rascunho ao ar: published=false tira a página do
-        // payload inteiro. Sem dizer isso aqui, some do radar.
-        return r ? ` · ${r} rascunho(s) fora do ar — "Publicar tudo" não os inclui` : "";
+        // payload inteiro. Sem dizer isso aqui, some do radar. Vaga vazia na fila do
+        // redator não é rascunho para revisar — contar junto confundia.
+        return (r ? ` · ${r} rascunho(s) para revisar — "Publicar tudo" não os inclui` : "")
+          + (fila ? ` · ${fila} na fila do redator (escreve às 07h e 19h UTC)` : "");
       })(),
       st.lastPublish ? ` · última publicação ${st.lastPublish.at} UTC` : ""),
     el("div", { className: "grow" }),
