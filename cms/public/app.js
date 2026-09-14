@@ -237,8 +237,18 @@ function editorView() {
     ...state.authors.map((a) => el("option", { value: a.slug, selected: page.author === a.slug }, a.name)));
   author.onchange = () => { page.author = author.value || null; state.dirty = true; markDirty(); };
 
-  const published = el("input", { type: "checkbox", checked: page.published, style: "width:auto" });
-  published.onchange = () => { page.published = published.checked; state.dirty = true; markDirty(); };
+  // Stub sem seção (o redator ainda não escreveu) não pode ser aprovado: em 13/09/2026 os
+  // 26 stubs do silo foram aprovados de uma vez e teriam ido ao ar vazios.
+  const semConteudo = !(page.sections || []).length;
+  const published = el("input", { type: "checkbox", checked: page.published, style: "width:auto", disabled: semConteudo && !page.published });
+  // Aprovar um rascunho é a decisão editorial; o dono esperava que isso já colocasse a
+  // página no ar (2026-09-13). Então "Salvar" de uma página recém-aprovada publica ela
+  // em seguida, em vez de exigir um segundo clique em "Publicar esta página".
+  published.onchange = () => {
+    page.published = published.checked;
+    state.aprovouAgora = published.checked && !state.publishedAoAbrir;
+    state.dirty = true; markDirty();
+  };
 
   const body = el("div", { className: "editor" },
     el("h2", {}, page.title || page.slug),
@@ -246,8 +256,14 @@ function editorView() {
     el("label", { className: "publish-toggle" + (page.published ? "" : " off") },
       published,
       el("span", {}, page.published
-        ? "Publicada — sai no site na próxima publicação."
-        : "RASCUNHO — não vai ao ar nem no \"Publicar tudo\". Marque aqui para aprovar.")),
+        ? (page.pending === false
+            ? "Aprovada e no ar. Alterações só chegam ao site depois de \"Publicar esta página\" (ou \"Publicar tudo\")."
+            : state.aprovouAgora
+              ? "Aprovada — ao clicar em Salvar, esta página é publicada e vai ao ar."
+              : "Aprovada, mas o site ainda não recebeu esta versão: clique em \"Publicar esta página\".")
+        : semConteudo
+          ? "RASCUNHO SEM CONTEÚDO — o redator automático ainda vai escrever esta página. Quando ela tiver seções, volte aqui para aprovar."
+          : "RASCUNHO — não vai ao ar nem no \"Publicar tudo\". Marque aqui para aprovar; salvar em seguida publica.")),
 
     field("Título", bind(page, "title", el("input", { value: page.title }))),
     field("Descrição (meta description)", bind(page, "description", el("textarea", { value: page.description, style: "min-height:60px" })),
@@ -295,6 +311,8 @@ async function loadAll() {
 async function openPage(slug) {
   if (state.dirty && !confirm("Há alterações não salvas. Descartar?")) return;
   state.current = await api(`api/pages/detail?slug=${encodeURIComponent(slug)}`);
+  state.publishedAoAbrir = !!state.current.published;
+  state.aprovouAgora = false;
   state.dirty = false;
   render();
 }
@@ -304,6 +322,12 @@ async function save() {
     const saved = await api("api/pages/detail", { method: "PUT", body: state.current });
     state.current = saved;
     state.dirty = false;
+    if (state.aprovouAgora) {
+      state.aprovouAgora = false;
+      state.publishedAoAbrir = true;
+      await publish([saved.slug]);   // aprovar + salvar = no ar
+      return;
+    }
     await loadAll();
     setMsg("Salvo. Publique para atualizar o site.");
   } catch (e) { setMsg(e.message, "err"); }

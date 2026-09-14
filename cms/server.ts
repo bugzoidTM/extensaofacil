@@ -166,7 +166,10 @@ app.get("/api/pages", requireAuth, (_req, res) => {
 app.get("/api/pages/detail", requireAuth, (req, res) => {
   const page = getPage(db, String(req.query.slug ?? ""));
   if (!page) return res.status(404).json({ error: "página não encontrada" });
-  res.json({ ...page, route: routeOf(page), words: wordCount(page) });
+  // mesma pendência da lista: o editor precisa saber se o site já tem esta versão
+  const row = db.prepare("SELECT published_at FROM pages WHERE slug = ?").get(page.slug) as any;
+  const pending = !row?.published_at || page.updatedAt > row.published_at;
+  res.json({ ...page, route: routeOf(page), words: wordCount(page), pending });
 });
 
 app.put("/api/pages/detail", requireAuth, (req, res) => {
