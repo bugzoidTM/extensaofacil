@@ -69,6 +69,18 @@
               "name": "telegramChatId",
               "value": "1610680538",
               "type": "string"
+            },
+            {
+              "id": "9f1c2b7e-reserva-modelo",
+              "name": "modeloReserva",
+              "value": "gpt-5",
+              "type": "string"
+            },
+            {
+              "id": "9f1c2b7e-reserva-token",
+              "name": "redatorReservaToken",
+              "value": "COLE_AQUI_A_CHAVE_DO_CHATGPTPROXY",
+              "type": "string"
             }
           ]
         },
@@ -177,11 +189,12 @@
       "maxTries": 2,
       "waitBetweenTries": 60000,
       "notesInFlow": true,
-      "notes": "closeai.nutef.com (qwenproxy). ~100s por artigo. Para voltar ao chatgptproxy: troque a URL para https://gptproxy.nutef.com/v1/chat/completions, o modelo para gpt-5 e o gptToken pela chave daquele serviço."
+      "notes": "closeai.nutef.com (qwenproxy). ~100s por artigo. Para voltar ao chatgptproxy: troque a URL para https://gptproxy.nutef.com/v1/chat/completions, o modelo para gpt-5 e o gptToken pela chave daquele serviço.\n2026-09-15 (n8n-doctor): se as 2 tentativas falharem (ex.: qwenproxy com todas as contas em cooldown/lanes ocupadas), a saída de ERRO vai para o Redator (chatgptproxy), que escreve o mesmo texto com o gpt-5. Nada é perdido.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "\n// Portão de qualidade. O PRD (§64) exige revisão antes de publicar; aqui rejeitamos\n// o que claramente não passa, para não gravar lixo no banco.\n\nconst resposta = $json.choices?.[0]?.message?.content;\nif (!resposta) throw new Error('O qwenproxy não devolveu conteúdo: ' + JSON.stringify($json).slice(0, 500));\n\nconst alvo = $('Escolher alvo e montar prompt').first().json.alvo;\nconst cfg = $('Configuração').first().json;\nconst publicado = $('Conteúdo publicado').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\n\n// O modelo às vezes embrulha o JSON em bloco de código, mesmo proibido no prompt.\nlet bruto = resposta.trim();\nconst cerca = bruto.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (cerca) bruto = cerca[1].trim();\nconst inicio = bruto.indexOf('{');\nconst fim = bruto.lastIndexOf('}');\nif (inicio < 0 || fim < 0) throw new Error('Resposta sem JSON reconhecível: ' + bruto.slice(0, 300));\n\nlet art;\ntry { art = JSON.parse(bruto.slice(inicio, fim + 1)); }\ncatch (e) { throw new Error('JSON inválido do modelo: ' + e.message + ' | trecho: ' + bruto.slice(0, 300)); }\n\nconst problemas = [];\n\n// A palavra-chave precisa sobreviver ao título, senão a página não disputa a consulta.\nconst semAcento = (t) => (t || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst chave = $('Escolher alvo e montar prompt').first().json.chave;\nif (chave) {\n  // Exigir a frase colada empurrava o título para uma construção artificial. Basta que\n  // todas as palavras da chave estejam presentes: o título fica natural e a página\n  // continua disputando a consulta.\n  const t = semAcento(art.title);\n  const faltando = semAcento(chave).split(/\\s+/).filter(w => w.length > 2 && !t.includes(w));\n  if (faltando.length) problemas.push(`o título não contém ${faltando.map(w => `\"${w}\"`).join(', ')} da palavra-chave \"${chave}\"`);\n}\nconst secoes = Array.isArray(art.sections) ? art.sections : [];\nconst textos = secoes.flatMap(s => [...(s.paragraphs || []), ...(s.bullets || [])]);\nconst palavras = [art.quickAnswer, ...secoes.map(s => s.title), ...textos].join(' ').trim().split(/\\s+/).filter(Boolean).length;\n\nif (!art.title) problemas.push('sem título');\nif (!art.description || art.description.length < 80) problemas.push('description curta demais');\nif (art.description && art.description.length > 200) problemas.push('description longa demais');\nif (!art.quickAnswer || art.quickAnswer.length < 180) problemas.push('resposta rápida curta demais');\nif (secoes.length < cfg.minSecoes) problemas.push(`só ${secoes.length} seções (mínimo ${cfg.minSecoes})`);\nif (palavras < cfg.minPalavras) problemas.push(`só ${palavras} palavras (mínimo ${cfg.minPalavras})`);\nif (secoes.some(s => !s.title || !(s.paragraphs || []).length)) problemas.push('seção sem título ou sem parágrafo');\n\n// Marcas de rascunho que o modelo às vezes deixa\nconst suspeito = /lorem ipsum|\\[inserir|\\bXXX\\b|preencher aqui|TODO:/i;\nif (suspeito.test(JSON.stringify(art))) problemas.push('sobrou texto de preenchimento');\n\n// §25/§22: nenhum parágrafo longo pode ser idêntico ao de outra página já publicada\nconst corpus = [];\nfor (const g of publicado.guides || []) {\n  if (g.slug === alvo.slug) continue;\n  for (const s of g.sections || []) for (const p of s.paragraphs || []) corpus.push({ slug: g.slug, p });\n}\nfor (const p of textos) {\n  if (p.length < 120) continue;\n  const igual = corpus.find(c => c.p.trim() === p.trim());\n  if (igual) { problemas.push(`parágrafo idêntico ao de /${igual.slug}/`); break; }\n}\n\n// related só pode apontar para slug que existe E está publicado — link para rascunho\n// vira 404 no ar (os stubs do silo por curso nascem published=false)\nconst existentes = new Set(paginas.filter(p => p.published !== false).map(p => p.slug));\nconst related = (art.related || []).filter(s => existentes.has(s) && s !== alvo.slug).slice(0, 4);\nif (!related.length) problemas.push('nenhum link interno válido');\n\n// FAQ: sai no bloco visível e no FAQPage do JSON-LD (mesmo dado). Só pares completos.\nconst faq = (Array.isArray(art.faq) ? art.faq : [])\n  .filter(f => f && typeof f.q === 'string' && typeof f.a === 'string' && f.q.trim() && f.a.trim().length >= 40)\n  .map(f => ({ q: f.q.trim(), a: f.a.trim() })).slice(0, 8);\nif (faq.length < 3) problemas.push(`só ${faq.length} perguntas frequentes válidas (mínimo 3)`);\n\nif (problemas.length) {\n  throw new Error(`Conteúdo reprovado para ${alvo.route}: ${problemas.join('; ')}`);\n}\n\nreturn [{\n  json: {\n    slug: alvo.slug,\n    kind: alvo.kind,\n    title: art.title,\n    description: art.description,\n    eyebrow: art.eyebrow || alvo.eyebrow || '',\n    quickAnswer: art.quickAnswer,\n    intent: alvo.intent,\n    tags: (art.tags || []).slice(0, 6),\n    related,\n    extra: alvo.extra || {},\n    author: 'equipe-extensao-facil',\n    reviewedAt: new Date().toISOString().slice(0, 10),\n    // Preserva o estado da página: stub criado como rascunho continua rascunho até\n    // alguém publicar no painel (§64); página que já está no ar continua no ar.\n    published: alvo.published !== false,\n    faq,\n    // o modelo devolve bullets: [\"\"] quando não tem item — vira marcador vazio na página\n    sections: secoes.map(s => ({ title: s.title, paragraphs: (s.paragraphs || []).filter(p => typeof p === 'string' && p.trim()),\n      bullets: (s.bullets || []).filter(b => typeof b === 'string' && b.trim()) })),\n    sources: Array.isArray(art.sources) ? art.sources : [],\n    _resumo: { rota: alvo.route, palavras, secoes: secoes.length, fontes: (art.sources || []).length },\n  },\n}];\n"
+        "jsCode": "\n// Portão de qualidade. O PRD (§64) exige revisão antes de publicar; aqui rejeitamos\n// o que claramente não passa, para não gravar lixo no banco.\n\nconst resposta = $json.choices?.[0]?.message?.content;\nif (!resposta) throw new Error('O redator (' + ($json.model || 'sem model') + ') não devolveu conteúdo: ' + JSON.stringify($json).slice(0, 500));\n\nconst alvo = $('Escolher alvo e montar prompt').first().json.alvo;\nconst cfg = $('Configuração').first().json;\nconst publicado = $('Conteúdo publicado').first().json;\nconst paginas = $('Listar páginas').all().map(i => i.json);\n\n// O modelo às vezes embrulha o JSON em bloco de código, mesmo proibido no prompt.\nlet bruto = resposta.trim();\nconst cerca = bruto.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (cerca) bruto = cerca[1].trim();\nconst inicio = bruto.indexOf('{');\nconst fim = bruto.lastIndexOf('}');\nif (inicio < 0 || fim < 0) throw new Error('Resposta sem JSON reconhecível: ' + bruto.slice(0, 300));\n\nlet art;\ntry { art = JSON.parse(bruto.slice(inicio, fim + 1)); }\ncatch (e) { throw new Error('JSON inválido do modelo: ' + e.message + ' | trecho: ' + bruto.slice(0, 300)); }\n\nconst problemas = [];\n\n// A palavra-chave precisa sobreviver ao título, senão a página não disputa a consulta.\nconst semAcento = (t) => (t || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst chave = $('Escolher alvo e montar prompt').first().json.chave;\nif (chave) {\n  // Exigir a frase colada empurrava o título para uma construção artificial. Basta que\n  // todas as palavras da chave estejam presentes: o título fica natural e a página\n  // continua disputando a consulta.\n  const t = semAcento(art.title);\n  const faltando = semAcento(chave).split(/\\s+/).filter(w => w.length > 2 && !t.includes(w));\n  if (faltando.length) problemas.push(`o título não contém ${faltando.map(w => `\"${w}\"`).join(', ')} da palavra-chave \"${chave}\"`);\n}\nconst secoes = Array.isArray(art.sections) ? art.sections : [];\nconst textos = secoes.flatMap(s => [...(s.paragraphs || []), ...(s.bullets || [])]);\nconst palavras = [art.quickAnswer, ...secoes.map(s => s.title), ...textos].join(' ').trim().split(/\\s+/).filter(Boolean).length;\n\nif (!art.title) problemas.push('sem título');\nif (!art.description || art.description.length < 80) problemas.push('description curta demais');\nif (art.description && art.description.length > 200) problemas.push('description longa demais');\nif (!art.quickAnswer || art.quickAnswer.length < 180) problemas.push('resposta rápida curta demais');\nif (secoes.length < cfg.minSecoes) problemas.push(`só ${secoes.length} seções (mínimo ${cfg.minSecoes})`);\nif (palavras < cfg.minPalavras) problemas.push(`só ${palavras} palavras (mínimo ${cfg.minPalavras})`);\nif (secoes.some(s => !s.title || !(s.paragraphs || []).length)) problemas.push('seção sem título ou sem parágrafo');\n\n// Marcas de rascunho que o modelo às vezes deixa\nconst suspeito = /lorem ipsum|\\[inserir|\\bXXX\\b|preencher aqui|TODO:/i;\nif (suspeito.test(JSON.stringify(art))) problemas.push('sobrou texto de preenchimento');\n\n// §25/§22: nenhum parágrafo longo pode ser idêntico ao de outra página já publicada\nconst corpus = [];\nfor (const g of publicado.guides || []) {\n  if (g.slug === alvo.slug) continue;\n  for (const s of g.sections || []) for (const p of s.paragraphs || []) corpus.push({ slug: g.slug, p });\n}\nfor (const p of textos) {\n  if (p.length < 120) continue;\n  const igual = corpus.find(c => c.p.trim() === p.trim());\n  if (igual) { problemas.push(`parágrafo idêntico ao de /${igual.slug}/`); break; }\n}\n\n// related só pode apontar para slug que existe E está publicado — link para rascunho\n// vira 404 no ar (os stubs do silo por curso nascem published=false)\nconst existentes = new Set(paginas.filter(p => p.published !== false).map(p => p.slug));\nconst related = (art.related || []).filter(s => existentes.has(s) && s !== alvo.slug).slice(0, 4);\nif (!related.length) problemas.push('nenhum link interno válido');\n\n// FAQ: sai no bloco visível e no FAQPage do JSON-LD (mesmo dado). Só pares completos.\nconst faq = (Array.isArray(art.faq) ? art.faq : [])\n  .filter(f => f && typeof f.q === 'string' && typeof f.a === 'string' && f.q.trim() && f.a.trim().length >= 40)\n  .map(f => ({ q: f.q.trim(), a: f.a.trim() })).slice(0, 8);\nif (faq.length < 3) problemas.push(`só ${faq.length} perguntas frequentes válidas (mínimo 3)`);\n\nif (problemas.length) {\n  throw new Error(`Conteúdo reprovado para ${alvo.route}: ${problemas.join('; ')}`);\n}\n\nreturn [{\n  json: {\n    slug: alvo.slug,\n    kind: alvo.kind,\n    title: art.title,\n    description: art.description,\n    eyebrow: art.eyebrow || alvo.eyebrow || '',\n    quickAnswer: art.quickAnswer,\n    intent: alvo.intent,\n    tags: (art.tags || []).slice(0, 6),\n    related,\n    extra: alvo.extra || {},\n    author: 'equipe-extensao-facil',\n    reviewedAt: new Date().toISOString().slice(0, 10),\n    // Preserva o estado da página: stub criado como rascunho continua rascunho até\n    // alguém publicar no painel (§64); página que já está no ar continua no ar.\n    published: alvo.published !== false,\n    faq,\n    // o modelo devolve bullets: [\"\"] quando não tem item — vira marcador vazio na página\n    sections: secoes.map(s => ({ title: s.title, paragraphs: (s.paragraphs || []).filter(p => typeof p === 'string' && p.trim()),\n      bullets: (s.bullets || []).filter(b => typeof b === 'string' && b.trim()) })),\n    sources: Array.isArray(art.sources) ? art.sources : [],\n    _resumo: { rota: alvo.route, palavras, secoes: secoes.length, fontes: (art.sources || []).length, redator: $json.model || '?' },\n  },\n}];\n"
       },
       "id": "951e189d-9a17-485d-a096-949f86ffe6eb",
       "name": "Validar conteúdo",
@@ -294,7 +307,7 @@
         "url": "=https://api.telegram.org/bot{{ $('Configuração').first().json.telegramToken }}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chat_id: $('Configuração').first().json.telegramChatId, parse_mode: 'HTML', disable_web_page_preview: true, text: '<b>Extensão Fácil — texto novo</b>\\n' + $('Validar conteúdo').first().json.title + '\\n' + $('Validar conteúdo').first().json._resumo.rota + ' · ' + $('Validar conteúdo').first().json._resumo.palavras + ' palavras · ' + $('Validar conteúdo').first().json._resumo.secoes + ' seções · ' + $('Validar conteúdo').first().json._resumo.fontes + ' fontes A CONFERIR\\n\\n' + ($('Configuração').first().json.publicarAutomaticamente ? 'Publicado.' : 'Salvo como rascunho. Revise e publique em https://extensaofacil.com.br/admin/') }) }}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Configuração').first().json.telegramChatId, parse_mode: 'HTML', disable_web_page_preview: true, text: '<b>Extensão Fácil — texto novo</b>\\n' + $('Validar conteúdo').first().json.title + '\\n' + $('Validar conteúdo').first().json._resumo.rota + ' · ' + $('Validar conteúdo').first().json._resumo.palavras + ' palavras · ' + $('Validar conteúdo').first().json._resumo.secoes + ' seções · ' + $('Validar conteúdo').first().json._resumo.fontes + ' fontes A CONFERIR · redator: ' + $('Validar conteúdo').first().json._resumo.redator + '\\n\\n' + ($('Configuração').first().json.publicarAutomaticamente ? 'Publicado.' : 'Salvo como rascunho. Revise e publique em https://extensaofacil.com.br/admin/') }) }}",
         "options": {
           "timeout": 60000
         }
@@ -367,6 +380,41 @@
       ],
       "id": "c0de0000-1111-4222-8333-444455556666",
       "name": "Tem alvo?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gptproxy.nutef.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Configuração').first().json.redatorReservaToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const p = $('Escolher alvo e montar prompt').first().json; const fmt = 'FORMATO DA RESPOSTA: um único objeto JSON válido, obrigatoriamente DENTRO de um bloco de código ```json ... ``` (fora do bloco a interface engole as aspas escapadas \\\\\" e o JSON quebra), sem comentário antes ou depois.'; const sys = /FORMATO DA RESPOSTA:/.test(p.system) ? p.system.replace(/FORMATO DA RESPOSTA:[^\\n]*/, fmt) : p.system + '\\n\\n' + fmt; return JSON.stringify({ model: $('Configuração').first().json.modeloReserva, messages: [ { role: 'system', content: sys }, { role: 'user', content: p.user } ] }); })() }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "c0b1d9a4-4d2e-4f3a-9a1e-redatorreserva",
+      "name": "Redator (chatgptproxy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 30000,
+      "notesInFlow": true,
+      "notes": "Redator de RESERVA (2026-09-15, n8n-doctor). Só roda quando o Redator (qwenproxy) esgota as retentativas — em 15/09 o soak social do Streampolis derrubou 2 das 3 contas Qwen em cooldown e ocupou as lanes da 3ª. gptproxy.nutef.com (ChatGPT via UI, gpt-5). O prompt vem do nó 'Escolher alvo e montar prompt' porque a saída de erro do HTTP Request não preserva o item de entrada.\nATENÇÃO: o ChatGPT renderiza a resposta como markdown e, fora de bloco de código, o \\\" vira \" e o JSON quebra (visto em 15/09, exec 824394). Por isso este nó troca a frase FORMATO DA RESPOSTA do system prompt e EXIGE bloco ```json``` — o Validar conteúdo já sabe tirar a cerca.",
+      "onError": "stopWorkflow"
     }
   ],
   "connections": {
@@ -484,6 +532,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Redator (chatgptproxy)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -504,6 +559,17 @@
         [
           {
             "node": "Configuração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redator (chatgptproxy)": {
+      "main": [
+        [
+          {
+            "node": "Validar conteúdo",
             "type": "main",
             "index": 0
           }
